@@ -1,8 +1,9 @@
 inst/doc
 .Rproj.user/
-
+README_files/
 .Rproj
 .RData
 .Rhistory
 finstr.Rproj
 .Rproj.user
+README.html

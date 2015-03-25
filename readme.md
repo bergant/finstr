@@ -1,13 +1,6 @@
----
-title: "Financial Statements in R"
-author: "Darko Bergant"
-date: "2015-03-25"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Financial Statements in R}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
----
+# finstr - Financial Statements in R
+
+
 
 
 **Warning: finstr package is in development. 

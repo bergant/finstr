@@ -1,13 +1,10 @@
 ---
-title: "Financial Statements in R"
-author: "Darko Bergant"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Financial Statements in R}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+title: finstr - Financial Statements in R 
+output:
+  html_document:
+    keep_md: yes
 ---
+
 
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
