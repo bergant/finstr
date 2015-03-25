@@ -108,7 +108,8 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
     dplyr::mutate(fact = as.numeric(fact), decimals = as.numeric(decimals)) %>%
     dplyr::inner_join(xbrl_vars$context, by = "contextId") %>%
     dplyr::select(one_of(col_vec)) %>%
-    tidyr::spread(elementId, fact)
+    tidyr::spread(elementId, fact) %>%
+    dplyr::arrange(endDate)
   
   vec1 <- elements$elementId[! elements$elementId %in% names(res)]
   df1 <- setNames( data.frame(rbind(rep(0, length(vec1)))), vec1)
@@ -127,8 +128,12 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   if(complete_only)
     res <- res[complete.cases( res[ value_cols ] ), ]
 
-  
-  rownames(res) <- res$contextId
+  if(any(duplicated(res$endDate))) {
+    warning("Rows with duplicated endDate")
+    rownames(res) <- res$contextId
+  } else {
+    rownames(res) <- res$endDate
+  }
   
   class(res) <- c("statement", "data.frame")
   return(res)
@@ -472,9 +477,10 @@ merge.statement <- function(x, y, ...) {
   }
   
   # merge facts and contexts
-  z <- merge.data.frame(x, y, all = TRUE)
+  z <- merge.data.frame(x, y, all = TRUE, ...)
   z[is.na(z)] <- 0
   z <- z[!duplicated(z[c("startDate", "endDate")], fromLast = TRUE), ]
+  z <- z[order(z$endDate), ]
   z <- z[,c(names(z)[1:4], get_elements(r_z))]
   class(z) <- class(x)
   attr(z, "relations") <- r_z
@@ -482,3 +488,24 @@ merge.statement <- function(x, y, ...) {
   row.names(z) <- z$contextId
   return(z)  
 }
+
+#' Merge two lists of statements
+#' 
+#' @details Merges all statements in x with all statements in y
+#' @param x statements object
+#' @param y statements object
+#' @param ... further arguments passed to or from other methods
+#' @return statements object
+#' @seealso \link{merge.statement} for merging two statements
+#' @export
+merge.statements <- function(x, y, ...) {
+  z <-
+    lapply(names(x), function(statement){
+      merge(x[[statement]], y[[statement]], ...)
+    })
+  names(z) <- names(y)
+  class(z) <- "statements"
+  return(z)
+}
+
+

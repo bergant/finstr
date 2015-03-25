@@ -84,14 +84,22 @@ get_elements(balance_sheet2014, parent_id = "LiabilitiesCurrent", as_data_frame 
 ## Merge statements from different periods
 Use `merge` function to create single financial statement data from two 
 statements. 
-```{r}
+```{r merge_statement}
 balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
-
 ```
 
-The structure of 2013 balance sheet differs from the one in 2014. Merge
-takes care of structure change by expanding the element hierarchy to union of 
-both statements. The values in missing elements is set to 0.
+The structure of merged balance sheets may differ because of taxonomy change. 
+Function `merge` takes care of structure change by expanding the element 
+hierarchy to capture the elements and their relations of both statements. 
+The values of any missing elements is set to 0.
+
+To merge all statements from *statements* object use merge on statements objects:
+```{r merge_statements}
+# merge all statements
+st_all <- merge( st2013, st2014 )
+# check if statement of income is merged:
+balance_sheet <- st_all$StatementOfFinancialPositionClassified
+```
 
 ## Prepare data with higher order concepts
 ### Simple example
@@ -155,7 +163,7 @@ balance_sheet %>%
 
 
 ### Statement as a data.frame
-Statement object (in our case `balance_sheet2014`) is also a data frame object.
+Statement object (in our case `balance_sheet`) is also a data frame object.
 With elements (or concepts) as columns and time periods as rows.
 It is possible then to use statement as a data frame:
 ```{r data.frame}
