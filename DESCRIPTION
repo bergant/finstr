@@ -1,0 +1,20 @@
+Package: finstr
+Type: Package
+Title: Financial Statements in R
+Version: 0.1
+Date: 2015-03-22
+Author: Darko Bergant
+Maintainer: Darko Bergant <darko.bergant@gmail.com>
+Description: Package finstr provides the data structures and functions 
+  for manipulating financial statements data in R.
+Depends: R (>= 2.10)
+License: GPL-2
+Imports: 
+    magrittr,
+    dplyr,
+    tidyr,
+    XBRL,
+    RCurl
+Suggests: testthat,
+    knitr
+VignetteBuilder: knitr

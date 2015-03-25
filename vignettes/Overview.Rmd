@@ -1,0 +1,168 @@
+---
+title: "Financial Statements in R"
+author: "Darko Bergant"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Financial Statements in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+```{r, echo=FALSE, results='hide', message=FALSE }
+library(dplyr)
+library(tidyr)
+library(finstr)
+data(xbrl_data_aapl2013)
+data(xbrl_data_aapl2014)
+```
+
+**Warning: the finstr package is in a development phase. 
+Please use with caution.**
+
+The purpose of finstr package is to use financial statements 
+data in more structured form and process.
+For now it is offering:
+
+1. Data structure for financial statements in tidy and usable format
+2. Function to merge two reporting periods in single object
+3. Some helper functions to help explore and manipulate the data in the 
+structure
+
+The idea in long term is to create an environment for reproducible financial 
+statement analysis. With existing packages like XBRL for XBRL parsing, 
+dplyr for data manipulation and knitr for reproducible research, this 
+shouldn't be a long journey.
+
+
+## Get data
+Use XBRL package or `xbrl_parse_min` function to parse XBRL files. For example:
+```{r xbrl_parse_min, eval=FALSE, echo=TRUE}
+library(finstr)
+# parse XBRL (Apple 10-K report)
+xbrl_url2014 <- 
+  "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml"
+xbrl_url2013 <- 
+  "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
+xbrl_data_aapl2014 <- xbrl_parse_min(xbrl_url2014)
+xbrl_data_aapl2013 <- xbrl_parse_min(xbrl_url2013)
+```
+
+With `xbrl_get_statements` convert XBRL data to *statements* object. 
+```{r xbrl_get_statements}
+st2013 <- xbrl_get_statements(xbrl_data_aapl2013)
+st2014 <- xbrl_get_statements(xbrl_data_aapl2014)
+st2014
+```
+
+Statements object is a list of 
+several statement objects (ballance sheets, income and cash 
+flow statements) which are data frames with elements as columns and periods
+as rows. 
+To get a single *statement* use *statements* object as a regular R list:
+```{r statement}
+balance_sheet2013 <- st2013$StatementOfFinancialPositionClassified
+balance_sheet2014 <- st2014$StatementOfFinancialPositionClassified
+balance_sheet2014
+```
+
+Only terminal (lowest level) concepts and values are kept in statement
+object's columns. 
+Information about hierarchical definition of higher order concepts is stored 
+as an attribute to the statement object.
+
+To see the calculation hierarchy of elements use `get_relations`: 
+```{r relations}
+get_relations(balance_sheet2014)
+```
+
+To query the fundamental elements from higher order elements use
+`get_elements`:
+```{r elements}
+get_elements(balance_sheet2014, parent_id = "LiabilitiesCurrent", as_data_frame = T)
+```
+
+## Merge statements from different periods
+Use `merge` function to create single financial statement data from two 
+statements. 
+```{r}
+balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
+
+```
+
+The structure of balance sheets in 2013 differs from the one in 2014. Merge
+takes care of structure change by expanding the element hierarchy to union of 
+both statements. The values in missing elements is set to 0.
+
+## Prepare data with higher order concepts
+### Simple example
+To get the higher order values in hierarhcy we have to sum the fundamental 
+element values. Function `expose` does it for us:
+```{r}
+library(dplyr)
+
+balance_sheet %>%
+  expose("Assets",
+         "Liabilities",
+         "CommintmentsAndContingencies",
+         "StockholdersEquity")
+  
+```
+
+We could define new names for elements. Let say we would like to see *contingencies* 
+and *equity* summed up in the liabilities element:
+```{r}
+balance_sheet %>%
+  expose("Assets",
+         Liabilities = c("Liabilities", 
+                         "CommintmentsAndContingencies",
+                         "StockholdersEquity"))
+```
+
+### Using other
+Function `other` sums everything not yet covered inside a higher order element.
+To split the assets to current and non-current we can define non-current assets
+as other assets after we "used" current assets:
+```{r}
+balance_sheet %>%
+  expose("AssetsCurrent",
+         NonCurrentAssets = other("Assets"),
+         Liabilities = other())
+```
+
+Note that we used `other` without element definition for the rest of the balance
+sheet. In this case `other()` results in sum of everything not already
+used.
+
+### Without
+Sometimes we need a substraction of concepts. For example:
+```{r}
+balance_sheet %>%
+  expose(
+    NonCurrentAssets = "Assets" %without% "AssetsCurrent",
+    CurrentAssets = other("Assets")
+  )
+```
+
+It is possible to substract several elements. For example:
+```{r}
+balance_sheet %>%
+  expose( 
+    TangibleAssets =
+      "Assets" %without% c("Goodwill","IntangibleAssetsNetExcludingGoodwill"),
+    IntangibleAssets = other("Assets")
+  ) 
+```
+
+
+### Statement as a data.frame
+Statement object (in our case `balance_sheet2014`) is also a data frame object.
+With elements (or concepts) as columns and time periods as rows.
+It is possible then to use statement as a data frame:
+```{r data.frame}
+balance_sheet[,c("endDate", "LongTermDebt")]
+balance_sheet$InventoryNet / 1000000
+with(balance_sheet, InventoryNet - lag(InventoryNet)) / 1000000
+
+```
+
+
