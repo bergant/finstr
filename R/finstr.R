@@ -16,22 +16,20 @@ NULL
 
 #' Parse XBRL
 #' 
-#' @param xbrl_file file path or url to XBRL file
-#' @return xbrl_data object
 #' @description Parse XBRL files
-#' @details xbrl_parse_min is using primitives from 
+#' @details xbrl_parse_min uses primitives from 
 #'  \link[XBRL]{XBRL-package} to parse only necessary information needed to 
 #'  convert XBRL to statement object with \code{\link{xbrl_get_statements}} 
 #'  function. 
 #'  It is slightly faster than \code{\link{xbrlDoAll}} but it does not parse 
 #'  all the data. 
 #'  It parses only roles, contexts, facts and calculation base link. 
+#' @param xbrl_file file path or url to XBRL file
+#' @param parse_labels if element labels should be parsed (default to FALSE)
+#' @return xbrl_data object
 #' @seealso \code{\link{xbrl_get_statements}}
 #' @export
-xbrl_parse_min <- function(xbrl_file) {
-  # 
-  # slightly faster than xbrlDoAll (for all data)
-
+xbrl_parse_min <- function(xbrl_file, parse_labels = FALSE) {
   
   # check if xbrl_file exist (url or file)
   if(grepl("^http", xbrl_file)) {
@@ -51,17 +49,19 @@ xbrl_parse_min <- function(xbrl_file) {
   xbrl_vars[["fact"]] <- XBRL::xbrlProcessFacts(doc)
   XBRL::xbrlFree(doc)
   
-  # process schema file (roles, labels)
+  # process schema file (roles)
   xbrl_file_xsd <- gsub("\\.xml$", ".xsd", xbrl_file)
   docS <- XBRL::xbrlParse(xbrl_file_xsd)
   xbrl_vars[["role"]] <- XBRL::xbrlProcessRoles(docS)
-#  xbrl_vars[["label"]] <-XBRL::xbrlProcessLabels(docS)
   XBRL::xbrlFree(docS)
 
-#   xbrl_file_lab <- gsub("\\.xml$", "_lab.xml", xbrl_file)
-#   docL <- XBRL::xbrlParse(xbrl_file_lab)
-#   xbrl_vars[["label"]] <-XBRL::xbrlProcessLabels(docL)
-#   XBRL::xbrlFree(docL)
+  # labels
+  if(parse_labels) {
+    xbrl_file_lab <- gsub("\\.xml$", "_lab.xml", xbrl_file)
+    docL <- XBRL::xbrlParse(xbrl_file_lab)
+    xbrl_vars[["label"]] <-XBRL::xbrlProcessLabels(docL)
+    XBRL::xbrlFree(docL)
+  }
 
   # process calculation link base
   xbrl_file_cal <- gsub("\\.xml$", "_cal.xml", xbrl_file)
@@ -334,7 +334,6 @@ fold <- function(x, element_groups) {
   x  
 }
 
-file.path(R.home("doc"), "KEYWORDS")
 
 #' Calculate higher order element values
 #' 

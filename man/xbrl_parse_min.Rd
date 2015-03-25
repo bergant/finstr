@@ -4,10 +4,12 @@
 \alias{xbrl_parse_min}
 \title{Parse XBRL}
 \usage{
-xbrl_parse_min(xbrl_file)
+xbrl_parse_min(xbrl_file, parse_labels = FALSE)
 }
 \arguments{
 \item{xbrl_file}{file path or url to XBRL file}
+
+\item{parse_labels}{if element labels should be parsed (default to FALSE)}
 }
 \value{
 xbrl_data object
@@ -16,7 +18,7 @@ xbrl_data object
 Parse XBRL files
 }
 \details{
-xbrl_parse_min is using primitives from
+xbrl_parse_min uses primitives from
  \link[XBRL]{XBRL-package} to parse only necessary information needed to
  convert XBRL to statement object with \code{\link{xbrl_get_statements}}
  function.
