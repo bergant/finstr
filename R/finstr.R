@@ -475,7 +475,7 @@ merge.statement <- function(x, y, ...) {
   z <- merge.data.frame(x, y, all = TRUE)
   z[is.na(z)] <- 0
   z <- z[!duplicated(z[c("startDate", "endDate")], fromLast = TRUE), ]
-  z <- z[,c(names(z)[1:4], get_elements(z))]
+  z <- z[,c(names(z)[1:4], get_elements(r_z))]
   class(z) <- class(x)
   attr(z, "relations") <- r_z
   attr(z, "role_id") <- attr(x, "role_id")

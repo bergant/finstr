@@ -16,7 +16,7 @@ data(xbrl_data_aapl2013)
 data(xbrl_data_aapl2014)
 ```
 
-**Warning: the finstr package is in a development phase. 
+**Warning: finstr package is in development. 
 Please use with caution.**
 
 The purpose of finstr package is to use financial statements 
@@ -89,7 +89,7 @@ balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
 
 ```
 
-The structure of balance sheets in 2013 differs from the one in 2014. Merge
+The structure of 2013 balance sheet differs from the one in 2014. Merge
 takes care of structure change by expanding the element hierarchy to union of 
 both statements. The values in missing elements is set to 0.
 
