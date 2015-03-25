@@ -457,7 +457,7 @@ other <- function(element = NULL) {
 #' @return statement object
 #' @export
 merge.statement <- function(x, y, ...) {
-  
+
   if( !"statement" %in% class(x) || !"statement" %in% class(y) ) {
     stop("Not statement objects")
   }
@@ -469,19 +469,24 @@ merge.statement <- function(x, y, ...) {
   if(!is.null(r_x) && !is.null(r_x)) {
     r_z <- 
       unique(rbind(r_x[,1:2], r_y[,1:2])) %>%
-      left_join(r_x, by = c("fromElementId", "toElementId")) %>%
-      left_join(r_y, by = c("fromElementId", "toElementId")) %>%
-      mutate( order = ifelse(is.na(order.x), order.y, order.x)) %>%
-      select( -order.x, -order.y)
+      dplyr::left_join(r_x, by = c("fromElementId", "toElementId")) %>%
+      dplyr::left_join(r_y, by = c("fromElementId", "toElementId")) %>%
+      dplyr::mutate( order = ifelse(is.na(order.x), order.y, order.x)) %>%
+      dplyr::select( -order.x, -order.y)
     class(r_z) <- class(r_x)
   }
   
   # merge facts and contexts
   z <- merge.data.frame(x, y, all = TRUE, ...)
-  z[is.na(z)] <- 0
+  # replace NAs in values by zeros
+  z[,5:ncol(z)][is.na(z[,5:ncol(z)])] <- 0
+  # remove duplicated rows (based on periods)
   z <- z[!duplicated(z[c("startDate", "endDate")], fromLast = TRUE), ]
+  # order rows by endDate
   z <- z[order(z$endDate), ]
+  # order columns based on original taxonomy
   z <- z[,c(names(z)[1:4], get_elements(r_z))]
+  # add attributes
   class(z) <- class(x)
   attr(z, "relations") <- r_z
   attr(z, "role_id") <- attr(x, "role_id")
@@ -499,6 +504,11 @@ merge.statement <- function(x, y, ...) {
 #' @seealso \link{merge.statement} for merging two statements
 #' @export
 merge.statements <- function(x, y, ...) {
+
+  if( !"statements" %in% class(x) || !"statements" %in% class(y) ) {
+    stop("Not statements objects")
+  }
+  
   z <-
     lapply(names(x), function(statement){
       merge(x[[statement]], y[[statement]], ...)

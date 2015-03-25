@@ -105,7 +105,7 @@ balance_sheet <- st_all$StatementOfFinancialPositionClassified
 ### Simple example
 To get the higher order values in hierarhcy we have to sum the fundamental 
 element values. Function `expose` does it for us:
-```{r}
+```{r expose1}
 library(dplyr)
 
 balance_sheet %>%
@@ -118,7 +118,7 @@ balance_sheet %>%
 
 We could define new names for elements. Let say we would like to see *contingencies* 
 and *equity* summed up in the liabilities element:
-```{r}
+```{r expose2}
 balance_sheet %>%
   expose("Assets",
          Liabilities = c("Liabilities", 
@@ -130,7 +130,7 @@ balance_sheet %>%
 Function `other` sums everything not yet covered inside a higher order element.
 To split the assets to current and non-current we can define non-current assets
 as other assets after we "used" current assets:
-```{r}
+```{r other1}
 balance_sheet %>%
   expose("AssetsCurrent",
          NonCurrentAssets = other("Assets"),
@@ -143,7 +143,7 @@ used.
 
 ### Without
 Sometimes we need a substraction of concepts. For example:
-```{r}
+```{r without1}
 balance_sheet %>%
   expose(
     NonCurrentAssets = "Assets" %without% "AssetsCurrent",
@@ -152,7 +152,7 @@ balance_sheet %>%
 ```
 
 It is possible to substract several elements. For example:
-```{r}
+```{r without2}
 balance_sheet %>%
   expose( 
     TangibleAssets =
@@ -162,15 +162,47 @@ balance_sheet %>%
 ```
 
 
-### Statement as a data.frame
+## Calculate new values and ratios
 Statement object (in our case `balance_sheet`) is also a data frame object.
 With elements (or concepts) as columns and time periods as rows.
 It is possible then to use statement as a data frame:
-```{r data.frame}
-balance_sheet[,c("endDate", "LongTermDebt")]
-balance_sheet$InventoryNet / 1000000
-with(balance_sheet, InventoryNet - lag(InventoryNet)) / 1000000
+
+Lets calculate current ratio which is defined by
+
+$$ Current Ratio = \frac{Current Assets}{Current Liabilities} $$
+
+```{r current_ratio}
+library(dplyr)
+
+balance_sheet %>%
+  expose("AssetsCurrent", "LiabilitiesCurrent") %>%
+  mutate(CurrentRatio = AssetsCurrent / LiabilitiesCurrent) %>%
+  select(endDate, CurrentRatio)
 
 ```
 
+If we need a period average value we can use a `lag` function.
+For example, to calculate *DSO* (days sales outstanding) over longer periods
+the average of account receivable is compared to net sales.
 
+We will use the formula for yearly statements:
+
+$$ DSO = \frac{Average Accounts Receivable}{Sales Revenue} \times 365 $$
+
+In this case we need to connect two type of statements: balance sheets and
+income statements. With matching reporting periods it can be accomplished 
+with joining two data frames:
+
+```{r DaysSalesOutstanding}
+
+balance_sheet %>%
+  inner_join( st_all$StatementOfIncome, by = "endDate") %>%
+  mutate( 
+    AccountReceivableLast = lag(AccountsReceivableNetCurrent),
+    AccountReceivableAvg = (AccountReceivableLast+AccountsReceivableNetCurrent)/2,
+    DaysSalesOutstanding = AccountReceivableAvg / SalesRevenueNet * 365 
+  ) %>%
+  select(endDate, DaysSalesOutstanding) %>%
+  na.omit()
+
+```
