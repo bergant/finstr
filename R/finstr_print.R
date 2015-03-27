@@ -43,7 +43,7 @@ print.statements <- function(x, ...) {
 #' @export
 print.statement <- function(x, ...) {
   # prints statement data in transposed form
-  
+
   if(!"statement" %in% class(x))
     stop("Not a statement object")
   if( !all(c("endDate", "startDate", "contextId") %in% names(x)) )
@@ -57,53 +57,36 @@ print.statement <- function(x, ...) {
   cat( nrow(x), "observations from", min(x$endDate),"to",max(x$endDate), "\n")
   cat("Numbers in ", paste(rep("0", -decimals), collapse = ""), "\n")
   
+  
+
   concepts <- names(x)[5:ncol(x)]
   values <- as.data.frame( t(x[, concepts] * 10^decimals))
-  names(values) <- x[,3]  
+  names(values) <- x[,3]
   values <- values[,ncol(values):1]
+  row.names(values) <- substring(row.names(values), 1, 50)
   x <- values
-  
   NextMethod(object = x, right = FALSE, ...)
 }
 
-print.xbrl_hierarchy <- function(x, ...) {
-  # prints XBRL hierarchy object
-  
-  if(!"xbrl_hierarchy" %in% class(x))
-    stop(substitute(x), " is not a XBRL hierarchy object")
-  df1 <- as.data.frame( 
-    lapply(x[grep("^level", names(x))], function(y) {
-      vec1 <-  y != lag(y)   
-      vec1[is.na(vec1)] <- TRUE
-      ifelse(vec1, y, "")
-      vec2 <- ifelse(vec1, y, "")
-      vec2[is.na(vec2)] <- ""
-      vec2    
-    }),
-    stringsAsFactors = FALSE
-  )
-  
-  for(j in seq_len(nrow(df1))) {
-    for(i in seq_len(ncol(df1))) {
-      #cat(paste(rep("  ", i), df1[j, i]))
-      #cat(df1[j, i])
-      if(df1[j, i] != "") {
-        cat(rep("..", i-1), df1[j, i], sep = "")
-      }
-      if(df1[j, i] != "")
-        cat("\n")
-    }
-  }
-}
 
-#' Print relations object
-#' @param x relations object
-#' @param ... further arguments passed to or from other methods.
-#' @seealso relations
+
+#' Print elements object
+#' @param x elements object
+#' @param descriptions prints labels or element IDs
 #' @keywords internal
 #' @export
-print.xbrl_relations <- function(x, ...) {
-  #cat("XBRL relations\n")
-  h1 <- xbrl_get_hierarchy(x)
-  print(h1, ...)
+print.elements <- function(x, descriptions = FALSE, ...) {
+  if(!all(c("level", "elementId", "labelString") %in% names(x))) {
+    return(NextMethod(object = x))
+  }
+  sel_col <- ifelse(descriptions, "labelString", "elementId")
+  for(i in seq_len(nrow(x))) {
+    str_out <- x[[sel_col]][i]
+    str_out <- paste0(paste0(rep("..", x[["level"]][i]-1), collapse=""), str_out)
+    str_out <- 
+      ifelse(nchar(str_out) > 70, 
+             paste0(substring(str_out, 1, 70), "..."),
+             str_out)
+    cat(str_out, "\n")
+  }
 }

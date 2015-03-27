@@ -36,20 +36,23 @@ shouldn't be a long journey.
 
 
 ## Get data
-Use XBRL package or `xbrl_parse_min` function to parse XBRL files. For example:
+Use XBRL package to parse XBRL files. For example:
 ```{r xbrl_parse_min, eval=FALSE, echo=TRUE}
-library(finstr)
+library(XBRL)
 # parse XBRL (Apple 10-K report)
 xbrl_url2014 <- 
   "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml"
 xbrl_url2013 <- 
   "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
-xbrl_data_aapl2014 <- xbrl_parse_min(xbrl_url2014)
-xbrl_data_aapl2013 <- xbrl_parse_min(xbrl_url2013)
+xbrl_data_aapl2014 <- xbrlDoAll(xbrl_url2014)
+xbrl_data_aapl2013 <- xbrlDoAll(xbrl_url2013)
 ```
 
+## Prepare statements
 With `xbrl_get_statements` convert XBRL data to *statements* object. 
 ```{r xbrl_get_statements}
+library(finstr)
+
 st2013 <- xbrl_get_statements(xbrl_data_aapl2013)
 st2014 <- xbrl_get_statements(xbrl_data_aapl2014)
 st2014
@@ -66,20 +69,19 @@ balance_sheet2014 <- st2014$StatementOfFinancialPositionClassified
 balance_sheet2014
 ```
 
-Only terminal (lowest level) concepts and values are kept in statement
-object's columns. 
-Information about hierarchical definition of higher order concepts is stored 
+
+Information about hierarchical structure of elements (concepts) is stored 
 as an attribute to the statement object.
 
-To see the calculation hierarchy of elements use `get_relations`: 
+To see the calculation hierarchy of elements use `get_elements`: 
 ```{r relations}
-get_relations(balance_sheet2014)
+get_elements(balance_sheet2014)
 ```
 
 To query the fundamental elements from higher order elements use
 `get_elements`:
 ```{r elements}
-get_elements(balance_sheet2014, parent_id = "LiabilitiesCurrent", as_data_frame = T)
+get_elements(balance_sheet2014, parent_id = "LiabilitiesCurrent")
 ```
 
 ## Merge statements from different periods
@@ -89,9 +91,10 @@ statements.
 balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
 ```
 
-The structure of merged balance sheets may differ because of taxonomy change. 
-Function `merge` takes care of structure change by expanding the element 
-hierarchy to capture the elements and their relations of both statements. 
+The structure of merged balance sheets may differ because of changes in XBRL
+taxonomy. 
+Function `merge` takes care of it by expanding the element 
+hierarchy to fit both statements. 
 The values of any missing elements is set to 0.
 
 To merge all statements from *statements* object use merge on statements objects:
@@ -102,67 +105,6 @@ st_all <- merge( st2013, st2014 )
 balance_sheet <- st_all$StatementOfFinancialPositionClassified
 ```
 
-## Prepare data with higher order concepts
-### Simple example
-To get the higher order values in hierarhcy we have to sum the fundamental 
-element values. Function `expose` does it for us:
-```{r expose1}
-library(dplyr)
-
-balance_sheet %>%
-  expose("Assets",
-         "Liabilities",
-         "CommintmentsAndContingencies",
-         "StockholdersEquity")
-  
-```
-
-We could define new names for elements. Let say we would like to see *contingencies* 
-and *equity* summed up in the liabilities element:
-```{r expose2}
-balance_sheet %>%
-  expose("Assets",
-         Liabilities = c("Liabilities", 
-                         "CommintmentsAndContingencies",
-                         "StockholdersEquity"))
-```
-
-### Using other
-Function `other` sums everything not yet covered inside a higher order element.
-To split the assets to current and non-current we can define non-current assets
-as other assets after we "used" current assets:
-```{r other1}
-balance_sheet %>%
-  expose("AssetsCurrent",
-         NonCurrentAssets = other("Assets"),
-         Liabilities = other())
-```
-
-Note that we used `other` without element definition for the rest of the balance
-sheet. In this case `other()` results in sum of everything not already
-used.
-
-### Without
-Sometimes we need a substraction of concepts. For example:
-```{r without1}
-balance_sheet %>%
-  expose(
-    NonCurrentAssets = "Assets" %without% "AssetsCurrent",
-    CurrentAssets = other("Assets")
-  )
-```
-
-It is possible to substract several elements. For example:
-```{r without2}
-balance_sheet %>%
-  expose( 
-    TangibleAssets =
-      "Assets" %without% c("Goodwill","IntangibleAssetsNetExcludingGoodwill"),
-    IntangibleAssets = other("Assets")
-  ) 
-```
-
-
 ## Calculate new values and ratios
 Statement object (in our case `balance_sheet`) is also a data frame object.
 With elements (or concepts) as columns and time periods as rows.
@@ -172,11 +114,10 @@ Lets calculate current ratio which is defined by
 
 $$ Current Ratio = \frac{Current Assets}{Current Liabilities} $$
 
-```{r current_ratio}
+```{r current_ratio, eval=FALSE}
 library(dplyr)
 
 balance_sheet %>%
-  expose("AssetsCurrent", "LiabilitiesCurrent") %>%
   mutate(CurrentRatio = AssetsCurrent / LiabilitiesCurrent) %>%
   select(endDate, CurrentRatio)
 
@@ -194,7 +135,7 @@ In this case we need to connect two type of statements: balance sheets and
 income statements. With matching reporting periods it can be accomplished 
 with joining two data frames:
 
-```{r DaysSalesOutstanding}
+```{r DaysSalesOutstanding, eval=FALSE}
 
 balance_sheet %>%
   inner_join( st_all$StatementOfIncome, by = "endDate") %>%

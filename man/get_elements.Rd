@@ -4,19 +4,19 @@
 \alias{get_elements}
 \title{Get the terminating nodes of the calculation hierarchy}
 \usage{
-get_elements(x, parent_id = NULL, as_data_frame = FALSE)
+get_elements(x, parent_id = NULL, all = TRUE)
 }
 \arguments{
 \item{x}{A statement object}
 
-\item{parent_id}{Ascendant element - used as filter if defined}
+\item{parent_id}{used as filter if defined}
 
-\item{as_data_frame}{If TRUE, the return value is in a data frame format (defaults to FALSE)}
+\item{all}{if FALSE only terminal elements from the hierarchy will be returned}
 }
 \description{
 Get the terminating nodes of the calculation hierarchy
 }
 \seealso{
-\code{\link{get_relations}} and \code{\link{expose}}
+\code{\link{get_elements}} and \code{\link{expose}}
 }
 

@@ -4,8 +4,13 @@
 \name{xbrl_data_aapl2013}
 \alias{xbrl_data_aapl2013}
 \title{XBRL data from SEC archive}
+\usage{
+data(xbrl_data_aapl2013)
+}
 \description{
 parsed XBRL files from
-   http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml
+   http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml
+   using XBRL::xbrlDoAll
+   and truncating to only necessary data
 }
 

@@ -24,7 +24,7 @@ xbrl_parse_min uses primitives from
  function.
  It is slightly faster than \code{\link{xbrlDoAll}} but it does not parse
  all the data.
- It parses only roles, contexts, facts and calculation base link.
+ It parses only roles, elements, contexts, facts and calculation base link.
 }
 \seealso{
 \code{\link{xbrl_get_statements}}

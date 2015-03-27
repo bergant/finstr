@@ -4,10 +4,12 @@
 \alias{xbrl_get_statements}
 \title{Get a financial statements object from XBRL}
 \usage{
-xbrl_get_statements(xbrl)
+xbrl_get_statements(xbrl_vars, rm_prefix = "us-gaap_")
 }
 \arguments{
-\item{xbrl}{A file path, url or XBRL parsed object}
+\item{xbrl_vars}{a XBRL parsed object}
+
+\item{rm_prefix}{a prefix to remove from element names}
 }
 \value{
 A statements object

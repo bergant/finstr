@@ -22,10 +22,3 @@ test_that("Merge", {
   nrow(st2[[1]])
 })  
 
-context("Expose")
-
-test_that("Expose", {
-  data(xbrl_data_aapl2014)
-  test_statement <- xbrl_get_statements(xbrl_data_aapl2014)
-  expect_more_than(ncol(expose(test_statement[[1]], "nothing")), 2)
-})

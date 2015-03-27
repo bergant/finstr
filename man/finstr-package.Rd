@@ -31,11 +31,10 @@ manipulate financial statements data in R.
   several \emph{statement} objects (ballance sheets, income and cash 
   flow statements) which are data frames with elements as columns and periods
   as rows.
-\item Only terminal (lowest level) concepts and values are kept in statement
-  object's columns. 
-  Information about hierarchical definition of higher order concepts is stored 
-  as an attribute to the statement object
-  and can be retrieved by \code{\link{get_relations}}.
+\item   
+  Information about calculation hierarchy of concepts and their descriptions 
+  is stored as an attribute to the statement object
+  and can be retrieved by \code{\link{get_elements}}.
 \item Statement objects are printed in transposed format. In most cases this 
   improves visibility of the statement content since there are usually more
   columns than rows. To see the statement in its data frame form use 

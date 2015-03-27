@@ -1,18 +1,56 @@
 
-#' @name xbrl_data_aapl2013
-#' @title XBRL data from SEC archive
-#' @description parsed XBRL files from 
-#'    http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml
-#' @docType data
-NULL
-
 #' @name xbrl_data_aapl2014
 #' @title XBRL data from SEC archive
 #' @description parsed XBRL files from 
-#'    http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml
+#'    http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml
+#'    using XBRL::xbrlDoAll
+#'    and truncating to only necessary data
+#' @usage data(xbrl_data_aapl2014) 
 #' @docType data
 NULL
 
+#' @name xbrl_data_aapl2013
+#' @title XBRL data from SEC archive
+#' @description parsed XBRL files from 
+#'    http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml
+#'    using XBRL::xbrlDoAll
+#'    and truncating to only necessary data
+#' @usage data(xbrl_data_aapl2013) 
+#' @docType data
+NULL
+
+#' Function to create package data included in the package
+#' 
+#' @details xbrlDoAll creates > 5Mb list - we need only 2Mb
+xbrl_create_data <-function() {
+
+  file1 <- "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
+  file2 <- "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml" 
+
+  system.time(xbrl_data_aapl2013 <- XBRL::xbrlDoAll(file1) )
+  system.time(xbrl_data_aapl2014 <- XBRL::xbrlDoAll(file2) )
+  
+  
+  xbrl_data_aapl2013$unit <- NULL
+  xbrl_data_aapl2013$footnote <- NULL
+  xbrl_data_aapl2013$definition <- NULL
+  xbrl_data_aapl2013$presentation <- NULL
+  xbrl_data_aapl2013$element <- 
+    xbrl_data_aapl2013$element %>%
+    semi_join(xbrl_data_aapl2013$fact, by="elementId" )
+  
+  xbrl_data_aapl2014$unit <- NULL
+  xbrl_data_aapl2014$footnote <- NULL
+  xbrl_data_aapl2014$definition <- NULL
+  xbrl_data_aapl2014$presentation <- NULL
+  xbrl_data_aapl2014$element <- 
+    xbrl_data_aapl2014$element %>%
+    semi_join(xbrl_data_aapl2014$fact, by="elementId" )
+  
+  # devtools::use_data(xbrl_data_aapl2013, overwrite = T)
+  # devtools::use_data(xbrl_data_aapl2014, overwrite = T)
+  
+}
 
 #' Parse XBRL
 #' 
@@ -23,7 +61,7 @@ NULL
 #'  function. 
 #'  It is slightly faster than \code{\link{xbrlDoAll}} but it does not parse 
 #'  all the data. 
-#'  It parses only roles, contexts, facts and calculation base link. 
+#'  It parses only roles, elements, contexts, facts and calculation base link. 
 #' @param xbrl_file file path or url to XBRL file
 #' @param parse_labels if element labels should be parsed (default to FALSE)
 #' @return xbrl_data object
@@ -47,12 +85,13 @@ xbrl_parse_min <- function(xbrl_file, parse_labels = FALSE) {
   doc <- XBRL::xbrlParse(xbrl_file)
   xbrl_vars[["context"]] <- XBRL::xbrlProcessContexts(doc)
   xbrl_vars[["fact"]] <- XBRL::xbrlProcessFacts(doc)
+  xbrl_file_xsd <- paste0(dirname(xbrl_file), "/", xbrlGetSchemaName(doc))
   XBRL::xbrlFree(doc)
   
   # process schema file (roles)
-  xbrl_file_xsd <- gsub("\\.xml$", ".xsd", xbrl_file)
   docS <- XBRL::xbrlParse(xbrl_file_xsd)
   xbrl_vars[["role"]] <- XBRL::xbrlProcessRoles(docS)
+  xbrl_vars[["element"]] <- XBRL::xbrlProcessElements(docS)
   XBRL::xbrlFree(docS)
 
   # labels
@@ -78,7 +117,11 @@ xbrl_parse_min <- function(xbrl_file, parse_labels = FALSE) {
 
 
 
+#' Get a vector of statement IDs
+#' @param xbrl_vars XBRL data
 #' @importFrom magrittr "%>%"
+#' @keywords internal
+#' @export
 xbrl_get_statement_ids <- function(xbrl_vars) {
   # finds roleIds for statements
   # example:
@@ -139,7 +182,89 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   return(res)
 }
 
+xbrl_get_labels <- function(xbrl_vars, elements) {
 
+  if( is.null(xbrl_vars$label[1])) {
+    return(NULL)
+  }
+  if( !("data.frame" %in% class(elements)) )
+    elements <- data.frame(elementId = elements, stringsAsFactors = FALSE)
+  
+  xbrl_vars$label %>%
+    dplyr::semi_join(elements, by = "elementId") %>%
+    dplyr::filter(labelRole == "http://www.xbrl.org/2003/role/label") %>%
+    dplyr::select(elementId, labelString)
+}
+
+
+xbrl_get_elements <- function(xbrl_vars, relations) {
+  
+  # get elements & parent relations & labels
+  elements <-
+    data.frame( 
+      elementId = with(relations, unique(c(fromElementId, toElementId))),
+      stringsAsFactors = FALSE
+      )  %>%
+    dplyr::left_join(xbrl_vars$element, by = c("elementId")) %>%
+    dplyr::left_join(relations, by = c("elementId" = "toElementId")) %>%
+    dplyr::left_join(xbrl_vars$label, by = c("elementId")) %>%
+    dplyr::filter(labelRole == "http://www.xbrl.org/2003/role/label") %>% 
+    dplyr::transmute(elementId, parentId = fromElementId, order, balance, labelString)
+  
+  elements <- get_elements_hierarchy(elements)
+  
+  class(elements) <- c("elements", "data.frame")
+  return(elements)
+}
+
+
+#' Get elements hierarchy 
+#' 
+#' @details Add level and hierarchycal id columns
+#' @param elements data.frame with elementId, parentId and order columns 
+#' @export
+#' @keywords internal
+get_elements_hierarchy <- function(elements) {
+  # reorder and classify elements by hierarchy
+  # adds level, hierarchical id and terminal column  
+  level <- 1
+  df1 <- elements %>%
+    dplyr::filter(is.na(parentId)) %>%
+    dplyr::mutate(id = "")
+  
+  while({
+    level_str <- 
+      unname(unlist(lapply(split(df1$id, df1$id), function(x) {
+        sprintf("%s%02d", x, 1:length(x))
+      })))
+    
+    elements[elements$elementId %in% df1$elementId, "level"] <- level
+    elements[ 
+      order(match(elements$elementId, df1$elementId))[1:length(level_str)], 
+      "id"] <- level_str
+    
+    df1 <- elements %>%
+      dplyr::filter(parentId %in% df1$elementId) %>%
+      dplyr::arrange(order) %>%
+      dplyr::select(elementId, parentId) %>%
+      dplyr::left_join(elements, by=c("parentId"="elementId"))
+    nrow(df1) > 0})
+  {
+    level <- level + 1
+  }
+
+  elements <- 
+    elements %>%  
+    dplyr::arrange(id) %>% 
+    dplyr::mutate( terminal = !elementId %in% parentId )
+}
+
+#' Get relations from XBRL calculation link base
+#' @param xbrl_vars XBRL data (list of dataframes)
+#' @param role_id id of role (usually of type statement)
+#' @param lbase link base (default is calculation)
+#' @keywords internal
+#' @export
 xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
   
   res <- 
@@ -155,7 +280,8 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
 
 #' Get a financial statements object from XBRL
 #' 
-#' @param xbrl A file path, url or XBRL parsed object
+#' @param xbrl_vars a XBRL parsed object
+#' @param rm_prefix a prefix to remove from element names
 #' @return A statements object
 #' @examples
 #' \dontrun{
@@ -172,19 +298,11 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
 #' 
 #' @seealso \link{finstr}
 #' @export
-xbrl_get_statements <- function(xbrl) {
-  
-  if(is.character(xbrl)) {
-    # parse XBRL file
-    opt1 <- unname(unlist(options("stringsAsFactors")))
-    options(stringsAsFactors = FALSE)
-    xbrl_vars <- xbrl_parse_min(xbrl)
-    options(stringsAsFactors = opt1)
-  } else {
-    # xbrl is parsed xbrl
-    if( !all( c("role", "calculation", "fact", "context") %in% names(xbrl)))
-      stop("Input does not include necessery data from XBRL.")
-    xbrl_vars <- xbrl
+xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_") {
+
+  # xbrl is parsed xbrl
+  if( !all( c("role", "calculation", "fact", "context", "element") %in% names(xbrl_vars))) {
+    stop("Input does not include all data needed from XBRL.")
   }
   
   # get all statement types from XBRL
@@ -195,8 +313,12 @@ xbrl_get_statements <- function(xbrl) {
     xbrl_get_relations(xbrl_vars, role_id)
   })
   names(relations) <- basename(role_ids)
-
-  taxonomy_prefix <- "^us-gaap_"
+  elements_list <- lapply(relations, function(x){
+    xbrl_get_elements(xbrl_vars, x)
+  })
+  names(elements_list) <- basename(role_ids)
+  
+  taxonomy_prefix <- sprintf("^%s", rm_prefix)
 
   # store xbrl data in statement data structure
   statements <- 
@@ -206,15 +328,19 @@ xbrl_get_statements <- function(xbrl) {
         function(role_id) {
           stat_name <- basename(role_id)
           links <- relations[[stat_name]]
-          elements <- get_elements(links)
+          elements <- elements_list[[stat_name]]
+          #label <- xbrl_get_labels(xbrl_vars, elements)
           res <- xbrl_get_data(elements, xbrl_vars)
           # delete taxonomy prefix
           names(res) <- gsub(taxonomy_prefix, "", names(res))          
           links$fromElementId <- gsub(taxonomy_prefix, "", links$fromElementId)          
           links$toElementId <- gsub(taxonomy_prefix, "", links$toElementId)          
+          elements$elementId <- gsub(taxonomy_prefix, "", elements$elementId)          
+          elements$parentId <- gsub(taxonomy_prefix, "", elements$parentId)          
           # set attributes
           attr(res, "role_id") <- stat_name
           attr(res, "relations") <- links
+          attr(res, "elements") <- elements
           res
         } 
       ),
@@ -224,116 +350,51 @@ xbrl_get_statements <- function(xbrl) {
   return(statements)
 }
 
-# relations <- r_z
-# View(r_z)
-# View(res_df)
-xbrl_get_hierarchy <- function(relations) {
-  
-  lbase <- relations
-  
-  # start with top element of the presentation tree
-  res_df <- 
-    lbase %>%
-    dplyr::anti_join(lbase, by = c("fromElementId" = "toElementId")) %>%
-    dplyr::select(elementId = fromElementId) %>%
-    unique()
-  
-  # breadth-first search
-  while({
-    df1 <- res_df %>%
-      na.omit() %>%
-      dplyr::left_join( lbase, by = c("elementId" = "fromElementId")) %>%
-      dplyr::arrange(elementId, order) %>%
-      dplyr::select(elementId, child = toElementId)  %>% 
-      unique();
-    nrow(df1) > 0
-  }) 
-  {
-    # add each new level to data frame
-    res_df <- res_df %>% dplyr::left_join(df1, by = "elementId")
-    names(res_df) <-  c(sprintf("level%d", 1:(ncol(res_df)-1)), "elementId")
-  }
-  
-  # add last level as special column (the hierarchy may not be uniformly deep)
-  res_df["elementId"] <- 
-    apply( t(res_df), 2, function(x){tail( x[!is.na(x)], 1)})
-  
-  # trim unused rows and columns
-  res_df <- res_df[sapply( res_df, function(x) length(unique(x)) ) > 1] 
-  res_df["elOrder"] <- 1:nrow(res_df) 
-  class(res_df) <- c("xbrl_hierarchy", "data.frame")
-  return(res_df)
-}
 
 
 
 #' Get the terminating nodes of the calculation hierarchy
 #' 
 #' @param x A statement object
-#' @param parent_id Ascendant element - used as filter if defined
-#' @param as_data_frame If TRUE, the return value is in a data frame format (defaults to FALSE)
-#' @seealso \code{\link{get_relations}} and \code{\link{expose}}
+#' @param parent_id used as filter if defined
+#' @param all if FALSE only terminal elements from the hierarchy will be returned
+#' @seealso \code{\link{get_elements}} and \code{\link{expose}}
 #' @export
-get_elements <- function(x, parent_id = NULL, as_data_frame = FALSE) {
+get_elements <- function(x, parent_id = NULL, all = TRUE) {
   # returns all terminating elements 
   # if parent_id provided, only descendands from this elements are returned
 
-  if( "statement" %in% class(x)  )
-    links <- attr(x, "relations")
-  else
-    links <- x
-
-  if( !"xbrl_relations" %in% class(links) )
-    stop("Function get_elements needs a statement or xbrl_relation class.")
+  if( !"statement" %in% class(x)  ) {
+    strop("Not a statement class")
+  }
   
-  hierarchy <- xbrl_get_hierarchy(links)
+  elements <- attr(x, "elements")
   
   if(!missing(parent_id)) {
-    vec1 <- unique(unlist(
-      lapply(hierarchy[grep("^level", names(hierarchy))], function(x) {
-        hierarchy$elementId[x %in% parent_id]
-      })
-    ))
-  } else {
-    vec1 <- hierarchy$elementId
+    id_parent <- elements$id[elements$elementId == parent_id]
+    elements <- elements %>%
+      dplyr::filter(substring(id, 1, nchar(id_parent)) == id_parent) %>%
+      as.elements()
+
   }
-  
-  if(as_data_frame) 
-    return(data.frame(elementId = vec1, stringsAsFactors = FALSE))
-  else
-    return(vec1)
-}
-
-#' Get calculation hierarchy of the statement elements
-#' 
-#' @param x a statement object
-#' @export
-#' @seealso \code{\link{get_elements}}, \code{\link{xbrl_get_statements}}
-get_relations <- function(x) {
-  return(attr(x, "relations"))
-}
-
-
-#' Collapses columns to specified groups
-#' 
-#' @param x a statement object
-#' @param element_groups A list of groups with column names
-#' @keywords internal
-#' @export
-fold <- function(x, element_groups) {
-  if(!"statement" %in% class(x))
-    stop("Not a financial statement data object")
-  old_names <- names(x)
-  old_relations <- get_relations(x)
-  for(g in seq_len(length(element_groups))) {
-    x[[names(element_groups)[g]]] <-  rowSums( x[ , element_groups[[g]] ])
-    old_names[old_names == element_groups[[g]][1]] <- names(element_groups)[g]
+  if(!all) {
+    elements <- elements %>%
+      dplyr::filter(terminal) %>%
+      dplyr::mutate(level = 1) %>%
+      as.elements()
   }
-  old_names <- old_names[ !old_names %in%  unlist(element_groups) ]
-  x <- x[,old_names]
-  x  
+
+  return(elements)
+
 }
 
+as.elements <- function(x) {
+  if( !all(c("elementId", "parentId") %in% names(x))) {
+    stop("Can't convert to elements")
+  }
+  class(x) <- c("elements", "data.frame")
+  return(x)
+}
 
 #' Calculate higher order element values
 #' 
@@ -373,6 +434,7 @@ fold <- function(x, element_groups) {
 #' @seealso \link{finstr}
 #' @export
 expose <- function(x, ...) {
+  stop("Under construction")
   elements <- list(...)
   # prepare for "other" and "without" directive
   used_cols <- c()
@@ -461,19 +523,17 @@ merge.statement <- function(x, y, ...) {
     stop("Not statement objects")
   }
   
-  # merge calculation hierarchies
-  r_x <- get_relations(x)
-  r_y <- get_relations(y)
-  r_z <- NULL
-  if(!is.null(r_x) && !is.null(r_x)) {
-    r_z <- 
-      unique(rbind(r_x[,1:2], r_y[,1:2])) %>%
-      dplyr::left_join(r_x, by = c("fromElementId", "toElementId")) %>%
-      dplyr::left_join(r_y, by = c("fromElementId", "toElementId")) %>%
-      dplyr::mutate( order = ifelse(is.na(order.x), order.y, order.x)) %>%
-      dplyr::select( -order.x, -order.y)
-    class(r_z) <- class(r_x)
-  }
+  # merge elements and create new hierarchy id-s
+  el_x <- get_elements(x)
+  el_y <- get_elements(y)
+  el_z <- NULL
+  if(!is.null(el_x) & !is.null(el_y))
+  col_names <- names(el_x)[!names(el_x) %in% c("level", "id", "terminal")]
+  el_z <- rbind(el_x[,col_names], el_y[,col_names])
+  el_z <- el_z[!duplicated(el_z[,c("elementId", "parentId")]), ]  
+  el_z <- get_elements_hierarchy(el_z)
+  class(el_z) <- c("elements", "data.frame")
+  
   
   # merge facts and contexts
   z <- merge.data.frame(x, y, all = TRUE, ...)
@@ -484,12 +544,12 @@ merge.statement <- function(x, y, ...) {
   # order rows by endDate
   z <- z[order(z$endDate), ]
   # order columns based on original taxonomy
-  z <- z[,c(names(z)[1:4], get_elements(r_z))]
+  z <- z[,c(names(z)[1:4], el_z[["elementId"]])]
+  row.names(z) <- z$contextId
   # add attributes
   class(z) <- class(x)
-  attr(z, "relations") <- r_z
+  attr(z, "elements") <- el_z
   attr(z, "role_id") <- attr(x, "role_id")
-  row.names(z) <- z$contextId
   return(z)  
 }
 
