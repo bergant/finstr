@@ -22,6 +22,7 @@ NULL
 #' Function to create package data included in the package
 #' 
 #' @details xbrlDoAll creates > 5Mb list - we need only 2Mb
+#' @keywords internal
 xbrl_create_data <-function() {
 
   file1 <- "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
@@ -358,7 +359,7 @@ xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_") {
 #' @param x A statement object
 #' @param parent_id used as filter if defined
 #' @param all if FALSE only terminal elements from the hierarchy will be returned
-#' @seealso \code{\link{get_elements}} and \code{\link{expose}}
+#' @seealso \code{\link{calculate}}
 #' @export
 get_elements <- function(x, parent_id = NULL, all = TRUE) {
   # returns all terminating elements 
@@ -393,108 +394,6 @@ as.elements <- function(x) {
     stop("Can't convert to elements")
   }
   class(x) <- c("elements", "data.frame")
-  return(x)
-}
-
-#' Calculate higher order element values
-#' 
-#' @param x a statement object
-#' @param ... elements of the statement
-#' @return a statement object
-#' @description Generate statement with agregated values. 
-#' @details expose uses calculation link base hierarchy to find 
-#' which concept to include in the aggregate. The aggregation function is
-#' always \emph{sum}. See examples for more details.
-#' @examples
-#' \dontrun{
-#' 
-#' # total assets
-#' st1$StatementOfFinancialPositionClassified %>%
-#'   expose(
-#'     "Assets" 
-#'   )
-#'
-#' # current and non-current assets (using other)  
-#' st1$StatementOfFinancialPositionClassified %>%
-#'   expose(
-#'     CurrentAssets = "AssetsCurrent", 
-#'     NoncurrentAssets = other("Assets"),
-#'     "LiabilitiesAndStockholdersEquity"
-#'   )
-#'   
-#' # calculate non-current assets (using %without% operator)   
-#' st1$StatementOfFinancialPositionClassified %>%
-#'   expose(
-#'     NoncurrentAssets = "Assets" %without% "AssetsCurrent",
-#'     CurrentAssets = "AssetsCurrent", 
-#'     "LiabilitiesAndStockholdersEquity"
-#'   )
-#' }
-#' 
-#' @seealso \link{finstr}
-#' @export
-expose <- function(x, ...) {
-  stop("Under construction")
-  elements <- list(...)
-  # prepare for "other" and "without" directive
-  used_cols <- c()
-  for(i in seq_along(elements)) {
-    cols <- get_elements(x, elements[[i]])
-    if(elements[[i]][1] == "")
-      cols <- get_elements(x)
-    el_type <- attr(elements[[i]], "type")
-    if( !is.null(el_type) && el_type == "other") {
-      cols <- cols[ !cols %in% used_cols]
-      elements[[i]] <- cols
-    } 
-    if( !is.null(el_type) && el_type == "without") {
-      e1 <- get_elements(x, elements[[i]][[1]])
-      e2 <- get_elements(x, elements[[i]][[2]])
-      cols <- e1[!e1 %in% e2]
-      elements[[i]] <- cols
-    }
-    used_cols <- union(used_cols, cols)
-  }
-  
-  res <- 
-    data.frame(
-      do.call(
-        cbind,
-        lapply(elements, function(element) {
-          cols <- get_elements(x, element)
-          cbind(rowSums(x[cols]))
-        })
-      )
-    )
-  names(res) <- elements
-  names(res)[names(elements)!=""] <- names(elements)[names(elements)!=""]
-  res <- cbind(x[,1:4], res )
-  class(res) <- c("statement", "data.frame")
-  return(res)
-}
-
-#' Used in expose to sum the concepts not already used 
-#' 
-#' @param element element from concept hierarchy 
-#' @keywords internal
-#' @export
-other <- function(element = NULL) {
-  if(missing(element)){
-    element <- ""
-  }
-  attr(element, "type") <- "other"
-  return(element)
-}
-
-#' Used in expose to sum the concepts under e1 without e2 
-#' 
-#' @param e1 element group
-#' @param e2 element group not to be included
-#' @keywords internal
-#' @export
-'%without%' <- function(e1, e2) {
-  x <- list(e1, e2)
-  attr(x, "type") <- "without"
   return(x)
 }
 
@@ -577,4 +476,30 @@ merge.statements <- function(x, y, ...) {
   return(z)
 }
 
+#' Calculate formulas 
+#' 
+#' @param x a statement object
+#' @param ... list of formulas
+#' @examples
+#' \dontrun{
+#' 
+#' balance_sheet %>% calculate(
+#'   
+#'   current_ratio = AssetsCurrent / LiabilitiesCurrent,
+#'   
+#'   quick_ratio =  
+#'     ( CashAndCashEquivalentsAtCarryingValue + 
+#'         AvailableForSaleSecuritiesCurrent +
+#'         AccountsReceivableNetCurrent
+#'       ) / LiabilitiesCurrent
+#' )
+#' }
+#' @export
+calculate <- function(x, ...) {
+
+  #dplyr::transmute_(x, endDate = ~endDate, .dots = lazyeval::lazy_dots(...))
+  dplyr::transmute_(x, endDate = ~endDate, .dots = lazyeval::lazy_dots(...)) %>%
+    dplyr::select(everything(), -matches("^\\."))
+  
+}
 

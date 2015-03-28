@@ -14,7 +14,8 @@ Imports:
     dplyr,
     tidyr,
     XBRL,
-    RCurl
+    RCurl,
+    lazyeval
 Suggests: testthat,
     knitr
 VignetteBuilder: knitr

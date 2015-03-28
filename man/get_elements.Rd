@@ -17,6 +17,6 @@ get_elements(x, parent_id = NULL, all = TRUE)
 Get the terminating nodes of the calculation hierarchy
 }
 \seealso{
-\code{\link{get_elements}} and \code{\link{expose}}
+\code{\link{calculate}}
 }
 

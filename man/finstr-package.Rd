@@ -22,9 +22,8 @@ manipulate financial statements data in R.
 \itemize{
 \item
   Convert XBRL (XML files and schemas) to a list of data frames 
-  (facts, contexts, roles and hierarchies) with \code{\link{xbrl_parse_min}} 
-  function. It is using XBRL parsing primitives from \link[XBRL]{XBRL-package} 
-  to parse only minimum data needed to construct financial statements.
+  (facts, contexts, roles and hierarchies) with \link[XBRL]{xbrlDoAll} 
+  function from \link[XBRL]{XBRL-package}. 
 \item
   Function \code{\link{xbrl_get_statements}} converts the XBRL data list
   to \emph{statements} object. It is a list of 
@@ -43,10 +42,11 @@ manipulate financial statements data in R.
 }
 \section{Using Financial Statements Data}{
 \itemize{
-\item To calculate values of higher order concepts and concept 
-  combinations (e.g. \emph{non-current assets}) use \code{\link{expose}} function.
-  The result of expose function is a statement object with transformed concepts 
-  (data frame columns).
+\item To calculate values with formulas use  
+  use \code{\link{calculate}} function or use 
+  statement as a data frame with R base functions or packages 
+  like \link[dplyr]{dplyr} for manipulating data 
+  frames.
 \item
   Function \code{\link{merge.statement}} can merge statements from different
   periods to a single statement. The elements and hierarchies are merged to

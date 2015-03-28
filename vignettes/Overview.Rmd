@@ -108,13 +108,13 @@ balance_sheet <- st_all$StatementOfFinancialPositionClassified
 ## Calculate new values and ratios
 Statement object (in our case `balance_sheet`) is also a data frame object.
 With elements (or concepts) as columns and time periods as rows.
-It is possible then to use statement as a data frame:
+It is possible then to use statement as a data frame.
 
 Lets calculate current ratio which is defined by
 
 $$ Current Ratio = \frac{Current Assets}{Current Liabilities} $$
 
-```{r current_ratio, eval=FALSE}
+```{r dplyr}
 library(dplyr)
 
 balance_sheet %>%
@@ -123,11 +123,31 @@ balance_sheet %>%
 
 ```
 
+By using `calculate` function we can achieve the same result with
+less verbose language. Lets calculate now two ratios:
+
+```{r calculate}
+library(dplyr)
+
+balance_sheet %>% calculate(
+  
+    Current_Ratio = AssetsCurrent / LiabilitiesCurrent,
+    
+    Quick_Ratio =  
+      ( CashAndCashEquivalentsAtCarryingValue + 
+          AvailableForSaleSecuritiesCurrent +
+          AccountsReceivableNetCurrent
+        ) / LiabilitiesCurrent
+    
+)
+```
+
+
 If we need a period average value we can use a `lag` function.
 For example, to calculate *DSO* (days sales outstanding) over longer periods
 the average of account receivable is compared to net sales.
 
-We will use the formula for yearly statements:
+We will use the formula for yearly preiods:
 
 $$ DSO = \frac{Average Accounts Receivable}{Sales Revenue} \times 365 $$
 
@@ -135,16 +155,17 @@ In this case we need to connect two type of statements: balance sheets and
 income statements. With matching reporting periods it can be accomplished 
 with joining two data frames:
 
-```{r DaysSalesOutstanding, eval=FALSE}
+```{r DaysSalesOutstanding}
 
 balance_sheet %>%
   inner_join( st_all$StatementOfIncome, by = "endDate") %>%
-  mutate( 
-    AccountReceivableLast = lag(AccountsReceivableNetCurrent),
-    AccountReceivableAvg = (AccountReceivableLast+AccountsReceivableNetCurrent)/2,
-    DaysSalesOutstanding = AccountReceivableAvg / SalesRevenueNet * 365 
-  ) %>%
-  select(endDate, DaysSalesOutstanding) %>%
-  na.omit()
+  calculate(
+    .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
+    .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
+    DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
+  )
 
 ```
+
+The leading dot instructs the calculate function to hide the value. In our case
+only DaysSalesOutstanding is selected in final result.

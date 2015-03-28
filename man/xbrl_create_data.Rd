@@ -12,4 +12,5 @@ Function to create package data included in the package
 \details{
 xbrlDoAll creates > 5Mb list - we need only 2Mb
 }
+\keyword{internal}
 
