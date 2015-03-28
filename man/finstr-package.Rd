@@ -51,12 +51,8 @@ manipulate financial statements data in R.
   Function \code{\link{merge.statement}} can merge statements from different
   periods to a single statement. The elements and hierarchies are merged to
   provide comfortable analysis of data over several periods.
-\item To calculate values from existing columns in statements use 
-  R base functions or packages like \link[dplyr]{dplyr} for manipulating data 
-  frames.
 }
 }
-
 
 \author{
 Darko Bergant
