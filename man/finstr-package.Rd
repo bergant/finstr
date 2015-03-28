@@ -11,7 +11,7 @@
 Financial statements data contain many variables (concepts, elements). 
 Several concepts are aggregations of other concepts. 
 Specific aggregations are needed for each purpose of 
-financial statement analysis .
+financial statement analysis.
 
 Package finstr provides the necessary data structures and functions to 
 manipulate financial statements data in R.
@@ -34,23 +34,19 @@ manipulate financial statements data in R.
   Information about calculation hierarchy of concepts and their descriptions 
   is stored as an attribute to the statement object
   and can be retrieved by \code{\link{get_elements}}.
-\item Statement objects are printed in transposed format. In most cases this 
-  improves visibility of the statement content since there are usually more
-  columns than rows. To see the statement in its data frame form use 
-  print.data.frame.
 }
 }
 \section{Using Financial Statements Data}{
 \itemize{
-\item To calculate values with formulas use  
-  use \code{\link{calculate}} function or use 
-  statement as a data frame with R base functions or packages 
-  like \link[dplyr]{dplyr} for manipulating data 
-  frames.
 \item
   Function \code{\link{merge.statement}} can merge statements from different
-  periods to a single statement. The elements and hierarchies are merged to
+  periods to a single statement object. The elements and hierarchies are merged to
   provide comfortable analysis of data over several periods.
+\item To calculate values with formulas use  
+  use \code{\link{calculate}} function or use 
+  statement as a data frame with R base functions and packages 
+  like \link[dplyr]{dplyr} for manipulating data 
+  frames.
 }
 }
 
