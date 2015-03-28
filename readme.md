@@ -178,7 +178,7 @@ To merge all statements from *statements* object use merge on statements objects
 ```r
 # merge all statements
 st_all <- merge( st2013, st2014 )
-# check if statement of income is merged:
+# check if balance sheets are merged:
 balance_sheet <- st_all$StatementOfFinancialPositionClassified
 ```
 
