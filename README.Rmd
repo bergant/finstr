@@ -166,3 +166,13 @@ balance_sheet %>%
 
 The leading dot instructs the calculate function to hide the value. In our case
 only DaysSalesOutstanding is selected in final result.
+
+##Lagged difference
+To calculate lagged difference for entire statement use `diff` function.
+The result is statement of changes between successive years:
+
+```{r diff}
+
+balance_sheet %>% diff()
+
+```

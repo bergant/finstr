@@ -267,3 +267,48 @@ balance_sheet %>%
 
 The leading dot instructs the calculate function to hide the value. In our case
 only DaysSalesOutstanding is selected in final result.
+
+##Lagged difference
+To calculate lagged difference for entire statement use `diff` function.
+The result is statement of changes between successive years:
+
+
+```r
+balance_sheet %>% diff()
+```
+
+```
+## Financial statement: 2 observations from 2013-09-28 to 2014-09-27 
+## Numbers in  000000 
+##                                                 2014-09-27 2013-09-28
+## Assets                                           24839      30936    
+## AssetsCurrent                                    -4755      15633    
+## CashAndCashEquivalentsAtCarryingValue             -415       3513    
+## AvailableForSaleSecuritiesCurrent               -15054       7904    
+## AccountsReceivableNetCurrent                      4358       2172    
+## InventoryNet                                       347        973    
+## DeferredTaxAssetsNetCurrent                        865        870    
+## NontradeReceivablesCurrent                        2220       -223    
+## OtherAssetsCurrent                                2924        424    
+## AvailableForSaleSecuritiesNoncurrent             23947      14093    
+## PropertyPlantAndEquipmentNet                      4027       1145    
+## Goodwill                                          3039        442    
+## IntangibleAssetsNetExcludingGoodwill               -37        -45    
+## OtherAssetsNoncurrent                            -1382       -332    
+## LiabilitiesAndStockholdersEquity                 24839      30936    
+## Liabilities                                      36841      25597    
+## LiabilitiesCurrent                               19790       5116    
+## AccountsPayableCurrent                            7829       1192    
+## AccruedLiabilitiesCurrent                         4597       2442    
+## DeferredRevenueCurrent                            1056       1482    
+## CommercialPaper                                   6308          0    
+## DeferredRevenueNoncurrent                          406        -23    
+## LongTermDebt                                     12027      16960    
+## OtherLiabilitiesNoncurrent                        4618       3544    
+## CommitmentsAndContingencies                          0          0    
+## StockholdersEquity                              -12002       5339    
+## CommonStockValue                                     0     -16422    
+## RetainedEarningsAccumulatedDeficit              -17104       2967    
+## AccumulatedOtherComprehensiveIncomeLossNetOfTax   1553       -970    
+## CommonStocksIncludingAdditionalPaidInCapital      3549      19764
+```
