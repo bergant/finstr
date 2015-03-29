@@ -35,6 +35,7 @@ manipulate financial statements data in R.
   is stored as an attribute to the statement object
   and can be retrieved by \code{\link{get_elements}}.
 }
+
 }
 \section{Using Financial Statements Data}{
 \itemize{
@@ -42,12 +43,14 @@ manipulate financial statements data in R.
   Function \code{\link{merge.statement}} can merge statements from different
   periods to a single statement object. The elements and hierarchies are merged to
   provide comfortable analysis of data over several periods.
-\item To calculate values with formulas use  
+\item To calculate values with formulas   
   use \code{\link{calculate}} function or use 
   statement as a data frame with R base functions and packages 
   like \link[dplyr]{dplyr} for manipulating data 
   frames.
 }
+For real data examples see vignettes: \code{browseVignettes("finstr")}
+
 }
 
 \author{

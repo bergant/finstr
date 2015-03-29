@@ -1,18 +1,3 @@
-#' Print a parsed XBRL document
-#' @param x XBRL data: a list of data frames as returned from XBRL::xbrlDoAll or xbrl_parse_min
-#' @param ... further arguments passed to or from other methods.
-#' @seealso xbrl_parse_min, xbrl_get_statements
-#' @keywords internal
-#' @export
-print.xbrl_vars <- function(x, ...) {
-  size <- round( object.size (x) / 2^20, 2)
-  cat("XBRL parsed data (xbrl_vars)\n")
-  cat("  Source: ", attr(x, "source"), "\n")
-  cat("  Size: ", size, " Mb\n")
-  cat(capture.output(str(x, max.level=1)), "\n", sep = "\n")
-}
-
-
 
 #' Print a statements object
 #' @param x a statements object
@@ -48,6 +33,10 @@ print.statement <- function(x, ...) {
     stop("Not a statement object")
   if( !all(c("endDate", "startDate", "contextId") %in% names(x)) )
     return(NextMethod(object = x, ...))
+  if( nrow(x)<1 )
+    return(NextMethod(object = x, ...))
+
+  
   
   decimals <- min(x[["decimals"]])
   if( is.null(decimals) ) decimals <- 0
@@ -62,8 +51,11 @@ print.statement <- function(x, ...) {
   concepts <- names(x)[5:ncol(x)]
   values <- as.data.frame( t(x[, concepts] * 10^decimals))
   names(values) <- x[,3]
-  values <- values[,ncol(values):1]
+  if(ncol(values)>1) {
+    values <- values[,ncol(values):1]
+  }
   row.names(values) <- substring(row.names(values), 1, 50)
+
   x <- values
   NextMethod(object = x, right = FALSE, ...)
 }

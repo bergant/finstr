@@ -183,19 +183,6 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   return(res)
 }
 
-xbrl_get_labels <- function(xbrl_vars, elements) {
-
-  if( is.null(xbrl_vars$label[1])) {
-    return(NULL)
-  }
-  if( !("data.frame" %in% class(elements)) )
-    elements <- data.frame(elementId = elements, stringsAsFactors = FALSE)
-  
-  xbrl_vars$label %>%
-    dplyr::semi_join(elements, by = "elementId") %>%
-    dplyr::filter(labelRole == "http://www.xbrl.org/2003/role/label") %>%
-    dplyr::select(elementId, labelString)
-}
 
 
 xbrl_get_elements <- function(xbrl_vars, relations) {
@@ -212,7 +199,7 @@ xbrl_get_elements <- function(xbrl_vars, relations) {
     dplyr::filter(labelRole == "http://www.xbrl.org/2003/role/label") %>% 
     dplyr::transmute(elementId, parentId = fromElementId, order, balance, labelString)
   
-  elements <- get_elements_hierarchy(elements)
+  elements <- get_elements_h(elements)
   
   class(elements) <- c("elements", "data.frame")
   return(elements)
@@ -225,7 +212,7 @@ xbrl_get_elements <- function(xbrl_vars, relations) {
 #' @param elements data.frame with elementId, parentId and order columns 
 #' @export
 #' @keywords internal
-get_elements_hierarchy <- function(elements) {
+get_elements_h <- function(elements) {
   # reorder and classify elements by hierarchy
   # adds level, hierarchical id and terminal column  
   level <- 1
@@ -354,7 +341,7 @@ xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_") {
 
 
 
-#' Get the terminating nodes of the calculation hierarchy
+#' Get statement elements and the calculation hierarchy
 #' 
 #' @param x A statement object
 #' @param parent_id used as filter if defined
@@ -397,6 +384,23 @@ as.elements <- function(x) {
   return(x)
 }
 
+#' Merge statement elements object
+#' 
+#' @param x elements object
+#' @param y elements object
+#' @param ... ignored
+#' @keywords internal
+#' @export
+merge.elements <- function(x, y, ...) {
+  z <- NULL
+  col_names <- names(x)[!names(x) %in% c("level", "id", "terminal")]
+  z <- rbind(x[,col_names], y[,col_names])
+  z <- z[!duplicated(z[,c("elementId", "parentId")]), ]  
+  z <- get_elements_h(z)
+  z <- as.elements(z)
+  return(z)
+}
+
 #' Merge two financial statements
 #' 
 #' @description Merge two statements from different time periods.
@@ -422,17 +426,10 @@ merge.statement <- function(x, y, ...) {
     stop("Not statement objects")
   }
   
-  # merge elements and create new hierarchy id-s
+  # merge elements
   el_x <- get_elements(x)
   el_y <- get_elements(y)
-  el_z <- NULL
-  if(!is.null(el_x) & !is.null(el_y))
-  col_names <- names(el_x)[!names(el_x) %in% c("level", "id", "terminal")]
-  el_z <- rbind(el_x[,col_names], el_y[,col_names])
-  el_z <- el_z[!duplicated(el_z[,c("elementId", "parentId")]), ]  
-  el_z <- get_elements_hierarchy(el_z)
-  class(el_z) <- c("elements", "data.frame")
-  
+  el_z <- merge(el_x, el_y)
   
   # merge facts and contexts
   z <- merge.data.frame(x, y, all = TRUE, ...)
@@ -503,3 +500,16 @@ calculate <- function(x, ...) {
   
 }
 
+#' Statement lagged differences
+#' 
+#' @param x a statement to be differenced
+#' @param lag an integer indicating which lag to use
+#' @param ... further arguments passed to or from other methods
+#' @return a statement object equal to successive  differences (x and lagged x)
+#' @export
+diff.statement <- function(x, lag = 1L, ...) {
+  y <- x[-((nrow(x)-lag+1):nrow(x)),]
+  y$endDate <- x$endDate[-(1:lag)]
+  y[,5:ncol(y)] <- x[-(1:lag),5:ncol(x)] - y[,5:ncol(y)]
+  return(y)
+}

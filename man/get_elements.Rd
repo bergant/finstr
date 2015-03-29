@@ -2,7 +2,7 @@
 % Please edit documentation in R/finstr.R
 \name{get_elements}
 \alias{get_elements}
-\title{Get the terminating nodes of the calculation hierarchy}
+\title{Get statement elements and the calculation hierarchy}
 \usage{
 get_elements(x, parent_id = NULL, all = TRUE)
 }
@@ -14,7 +14,7 @@ get_elements(x, parent_id = NULL, all = TRUE)
 \item{all}{if FALSE only terminal elements from the hierarchy will be returned}
 }
 \description{
-Get the terminating nodes of the calculation hierarchy
+Get statement elements and the calculation hierarchy
 }
 \seealso{
 \code{\link{calculate}}
