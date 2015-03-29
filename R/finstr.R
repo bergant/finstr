@@ -353,7 +353,7 @@ get_elements <- function(x, parent_id = NULL, all = TRUE) {
   # if parent_id provided, only descendands from this elements are returned
 
   if( !"statement" %in% class(x)  ) {
-    strop("Not a statement class")
+    stop("Not a statement class")
   }
   
   elements <- attr(x, "elements")
@@ -477,6 +477,7 @@ merge.statements <- function(x, y, ...) {
 #' 
 #' @param x a statement object
 #' @param ... list of formulas
+#' @param digits if specified the results will be rounded according to number of digits
 #' @examples
 #' \dontrun{
 #' 
@@ -492,13 +493,35 @@ merge.statements <- function(x, y, ...) {
 #' )
 #' }
 #' @export
-calculate <- function(x, ...) {
+calculate <- function(x, ..., digits = NULL) {
 
   #dplyr::transmute_(x, endDate = ~endDate, .dots = lazyeval::lazy_dots(...))
-  dplyr::transmute_(x, endDate = ~endDate, .dots = lazyeval::lazy_dots(...)) %>%
+  res <- 
+    dplyr::transmute_(x, date = ~endDate, .dots = lazyeval::lazy_dots(...)) %>%
     dplyr::select(everything(), -matches("^\\."))
-  
+  if(!missing(digits)) {
+    res[,2:ncol(res)] <- round(res[,2:ncol(res)], digits) 
+  }
+  return(res)
 }
+
+#' Define calculation
+#' @param ... formulas
+#' @seealso \code{\link{do_calculation}}
+#' @export
+calculation <- function(...) {
+  lazyeval::lazy(calculate(x, ...)) 
+}
+
+#' Run the calculation
+#' @param x statement object
+#' @param calculation a calculation expression
+#' @seealso \code{\link{calculation}}
+#' @export
+do_calculation <- function(x, calculation) {
+  lazyeval::lazy_eval(calculation, list(x = x))
+}
+
 
 #' Statement lagged differences
 #' 

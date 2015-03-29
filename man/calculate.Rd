@@ -4,12 +4,14 @@
 \alias{calculate}
 \title{Calculate formulas}
 \usage{
-calculate(x, ...)
+calculate(x, ..., digits = NULL)
 }
 \arguments{
 \item{x}{a statement object}
 
 \item{...}{list of formulas}
+
+\item{digits}{if specified the results will be rounded according to number of digits}
 }
 \description{
 Calculate formulas

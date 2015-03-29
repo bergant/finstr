@@ -6,6 +6,7 @@ output:
 ---
 
 
+
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
 library(tidyr)
@@ -63,23 +64,23 @@ To get a single *statement* use *statements* object as a regular R list:
 ```{r statement}
 balance_sheet2013 <- st2013$StatementOfFinancialPositionClassified
 balance_sheet2014 <- st2014$StatementOfFinancialPositionClassified
+income2013 <- st2013$StatementOfIncome
+income2014 <- st2014$StatementOfIncome
 balance_sheet2014
+income2014
 ```
 
 
 Information about hierarchical structure of elements (concepts) is stored 
 as an attribute to the statement object.
 
-To see the calculation hierarchy of elements use `get_elements`: 
+To get more data about the concepts used in the statement call `get_elements`: 
 ```{r relations}
-get_elements(balance_sheet2014)
+bs_els <- get_elements(balance_sheet2014)
 ```
 
-To query the fundamental elements from higher order elements use
-`get_elements`:
-```{r elements}
-get_elements(balance_sheet2014, parent_id = "LiabilitiesCurrent")
-```
+Elements store concept descriptions, balance attribute (debit/credit) and 
+parent/child relationships between concepts.
 
 ## Merge statements from different periods
 Use `merge` function to create single financial statement data from two 
@@ -88,9 +89,9 @@ statements.
 balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
 ```
 
-The structure of merged balance sheets may differ because of changes in XBRL
-taxonomy. 
-Function `merge` takes care of it by expanding the element 
+The structure of merged balance sheets may differ if XBRL
+taxonomy changed. 
+Function `merge` takes care of it by expanding the elements 
 hierarchy to fit both statements. 
 The values of any missing elements is set to 0.
 
@@ -98,7 +99,7 @@ To merge all statements from *statements* object use merge on statements objects
 ```{r merge_statements}
 # merge all statements
 st_all <- merge( st2013, st2014 )
-# check if balance sheets are merged:
+# check if blance sheets are merged:
 balance_sheet <- st_all$StatementOfFinancialPositionClassified
 ```
 
@@ -166,6 +167,51 @@ balance_sheet %>%
 
 The leading dot instructs the calculate function to hide the value. In our case
 only DaysSalesOutstanding is selected in final result.
+
+Use digits parameter to control rounding:
+
+```{r income}
+
+
+st_all$StatementOfIncome %>% calculate( digits = 2,
+
+  Gross_Margin = 
+    (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
+
+  Operating_Margin =
+    OperatingIncomeLoss / SalesRevenueNet,
+
+  Net_Margin = 
+    NetIncomeLoss / SalesRevenueNet
+
+  ) 
+
+```
+
+When running same calculation for different statements, store the
+calculation with `calculation` and run with `do_calculation`:
+```{r calculation}
+# define calculation
+profit_margins <- calculation(
+  
+  Gross_Margin = 
+    (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
+  
+  Operating_Margin =
+    OperatingIncomeLoss / SalesRevenueNet,
+  
+  Net_Margin = 
+    NetIncomeLoss / SalesRevenueNet,
+  
+  digits = 3
+)
+
+# run profit margins for two different statements
+income2013 %>% do_calculation(profit_margins)
+income2014 %>% do_calculation(profit_margins)
+
+```
+
 
 ##Lagged difference
 To calculate lagged difference for entire statement use `diff` function.

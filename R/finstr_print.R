@@ -45,8 +45,6 @@ print.statement <- function(x, ...) {
   cat( "Financial statement: ")
   cat( nrow(x), "observations from", min(x$endDate),"to",max(x$endDate), "\n")
   cat("Numbers in ", paste(rep("0", -decimals), collapse = ""), "\n")
-  
-  
 
   concepts <- names(x)[5:ncol(x)]
   values <- as.data.frame( t(x[, concepts] * 10^decimals))
@@ -54,7 +52,31 @@ print.statement <- function(x, ...) {
   if(ncol(values)>1) {
     values <- values[,ncol(values):1]
   }
-  row.names(values) <- substring(row.names(values), 1, 50)
+  
+  # names
+  elements <- get_elements(x)
+  r_names <- row.names(values)
+  el_pos <- which(elements$elementId %in% r_names )
+  #fill_dots <- paste0(rep(". ", max(elements$level)), collapse = "")
+  fill_dots <- paste0(rep("  ", max(elements$level)), collapse = "")
+  parent_pos <- match(elements$parentId, elements$elementId)
+  r_names <- 
+    paste0( 
+      substring(fill_dots,1, (elements[["level"]][el_pos]-1)*2-2),
+      ifelse( 
+        is.na(elements[["balance"]][parent_pos]), 
+        "",
+        ifelse(
+          elements[["balance"]][el_pos] == elements[["balance"]][parent_pos],
+          "+ ", "- "
+        )
+      ),
+      r_names,
+      ifelse(elements[["level"]][el_pos] < elements[["level"]][el_pos+1],
+             " = ", "")
+    )
+
+  row.names(values) <- substring(r_names, 1, 50)
 
   x <- values
   NextMethod(object = x, right = FALSE, ...)
