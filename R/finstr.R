@@ -38,7 +38,7 @@ xbrl_create_data <-function() {
   xbrl_data_aapl2013$presentation <- NULL
   xbrl_data_aapl2013$element <- 
     xbrl_data_aapl2013$element %>%
-    semi_join(xbrl_data_aapl2013$fact, by="elementId" )
+    dplyr::semi_join(xbrl_data_aapl2013$fact, by="elementId" )
   
   xbrl_data_aapl2014$unit <- NULL
   xbrl_data_aapl2014$footnote <- NULL
@@ -46,7 +46,7 @@ xbrl_create_data <-function() {
   xbrl_data_aapl2014$presentation <- NULL
   xbrl_data_aapl2014$element <- 
     xbrl_data_aapl2014$element %>%
-    semi_join(xbrl_data_aapl2014$fact, by="elementId" )
+    dplyr::semi_join(xbrl_data_aapl2014$fact, by="elementId" )
   
   # devtools::use_data(xbrl_data_aapl2013, overwrite = T)
   # devtools::use_data(xbrl_data_aapl2014, overwrite = T)
@@ -67,6 +67,7 @@ xbrl_create_data <-function() {
 #' @param parse_labels if element labels should be parsed (default to FALSE)
 #' @return xbrl_data object
 #' @seealso \code{\link{xbrl_get_statements}}
+#' @keywords internal
 #' @export
 xbrl_parse_min <- function(xbrl_file, parse_labels = FALSE) {
   
@@ -86,7 +87,7 @@ xbrl_parse_min <- function(xbrl_file, parse_labels = FALSE) {
   doc <- XBRL::xbrlParse(xbrl_file)
   xbrl_vars[["context"]] <- XBRL::xbrlProcessContexts(doc)
   xbrl_vars[["fact"]] <- XBRL::xbrlProcessFacts(doc)
-  xbrl_file_xsd <- paste0(dirname(xbrl_file), "/", xbrlGetSchemaName(doc))
+  xbrl_file_xsd <- paste0(dirname(xbrl_file), "/", XBRL::xbrlGetSchemaName(doc))
   XBRL::xbrlFree(doc)
   
   # process schema file (roles)
@@ -132,9 +133,9 @@ xbrl_get_statement_ids <- function(xbrl_vars) {
     stop(substitute(xbrl_vars), " does not include role and calculation data.")
   
   xbrl_vars$role %>%
-    dplyr::filter(type == "Statement") %>%
+    dplyr::filter_(~type == "Statement") %>%
     dplyr::semi_join(xbrl_vars$calculation, by = "roleId") %>%
-    dplyr::select(roleId) %>%
+    dplyr::select_(~roleId) %>%
     simplify2array() %>%
     unname()
 }
@@ -144,16 +145,15 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   
   if( !("data.frame" %in% class(elements)) )
     elements <- data.frame(elementId = elements, stringsAsFactors = FALSE)
-  col_vec <- 
-    c("contextId", "startDate", "endDate", "elementId", "fact", "decimals")  
+  
   res <-
     elements %>%
     dplyr::inner_join(xbrl_vars$fact, by = "elementId") %>% 
-    dplyr::mutate(fact = as.numeric(fact), decimals = as.numeric(decimals)) %>%
+    dplyr::mutate_(fact = ~as.numeric(fact), decimals = ~as.numeric(decimals)) %>%
     dplyr::inner_join(xbrl_vars$context, by = "contextId") %>%
-    dplyr::select(one_of(col_vec)) %>%
-    tidyr::spread(elementId, fact) %>%
-    dplyr::arrange(endDate)
+    dplyr::select_(~contextId ,  ~startDate ,  ~endDate ,  ~elementId ,  ~fact ,  ~decimals) %>%
+    tidyr::spread_("elementId", "fact") %>%
+    dplyr::arrange_(~endDate)
   
   vec1 <- elements$elementId[! elements$elementId %in% names(res)]
   df1 <- setNames( data.frame(rbind(rep(0, length(vec1)))), vec1)
@@ -196,8 +196,8 @@ xbrl_get_elements <- function(xbrl_vars, relations) {
     dplyr::left_join(xbrl_vars$element, by = c("elementId")) %>%
     dplyr::left_join(relations, by = c("elementId" = "toElementId")) %>%
     dplyr::left_join(xbrl_vars$label, by = c("elementId")) %>%
-    dplyr::filter(labelRole == "http://www.xbrl.org/2003/role/label") %>% 
-    dplyr::transmute(elementId, parentId = fromElementId, order, balance, labelString)
+    dplyr::filter_(~labelRole == "http://www.xbrl.org/2003/role/label") %>% 
+    dplyr::transmute_(~elementId, parentId = ~fromElementId, ~order, ~balance, ~labelString)
   
   elements <- get_elements_h(elements)
   
@@ -217,7 +217,7 @@ get_elements_h <- function(elements) {
   # adds level, hierarchical id and terminal column  
   level <- 1
   df1 <- elements %>%
-    dplyr::filter(is.na(parentId)) %>%
+    dplyr::filter_(~is.na(parentId)) %>%
     dplyr::mutate(id = "")
   
   while({
@@ -232,9 +232,9 @@ get_elements_h <- function(elements) {
       "id"] <- level_str
     
     df1 <- elements %>%
-      dplyr::filter(parentId %in% df1$elementId) %>%
-      dplyr::arrange(order) %>%
-      dplyr::select(elementId, parentId) %>%
+      dplyr::filter_(~parentId %in% df1$elementId) %>%
+      dplyr::arrange_(~order) %>%
+      dplyr::select_(~elementId, ~parentId) %>%
       dplyr::left_join(elements, by=c("parentId"="elementId"))
     nrow(df1) > 0})
   {
@@ -243,8 +243,8 @@ get_elements_h <- function(elements) {
 
   elements <- 
     elements %>%  
-    dplyr::arrange(id) %>% 
-    dplyr::mutate( terminal = !elementId %in% parentId )
+    dplyr::arrange_(~id) %>% 
+    dplyr::mutate_( terminal = ~ !elementId %in% parentId )
 }
 
 #' Get relations from XBRL calculation link base
@@ -257,8 +257,8 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
   
   res <- 
     xbrl_vars[[lbase]] %>%
-    dplyr::filter(roleId == role_id) %>%
-    dplyr::select(fromElementId, toElementId, order) %>% 
+    dplyr::filter_(~roleId == role_id) %>%
+    dplyr::select_(~fromElementId, ~toElementId, ~order) %>% 
     dplyr::mutate(order = as.numeric(order)) %>%
     unique() 
 
@@ -355,19 +355,19 @@ get_elements <- function(x, parent_id = NULL, all = TRUE) {
   if( !"statement" %in% class(x)  ) {
     stop("Not a statement class")
   }
-  
+
   elements <- attr(x, "elements")
   
   if(!missing(parent_id)) {
-    id_parent <- elements$id[elements$elementId == parent_id]
+    id_parent <- elements[["id"]][elements[["elementId"]] == parent_id]
     elements <- elements %>%
-      dplyr::filter(substring(id, 1, nchar(id_parent)) == id_parent) %>%
+      dplyr::filter_(~substring(id, 1, nchar(id_parent)) == id_parent) %>%
       as.elements()
 
   }
   if(!all) {
     elements <- elements %>%
-      dplyr::filter(terminal) %>%
+      dplyr::filter_(~terminal) %>%
       dplyr::mutate(level = 1) %>%
       as.elements()
   }
@@ -383,6 +383,51 @@ as.elements <- function(x) {
   class(x) <- c("elements", "data.frame")
   return(x)
 }
+
+#' Check statement
+#' @description Checks statement calculation consistency
+#' @param statement statement object
+#' @return check object with calculated and original values
+#' @export
+check_statement <- function(statement) {
+  
+  els <- get_elements(statement)
+  if(! "statement" %in% class(statement)) {
+    stop("Not a statement object")
+  }
+  if(is.null(els)) {
+    stop("No calculation hierarchy found")
+  }
+  
+  err1 <- do.call(
+    rbind,
+    lapply(els$elementId, function(x) {
+      
+      xb <- els$balance[els$element == x]
+      xc <- na.omit(els$elementId[els$parentId == x])
+      xcb <- els$balance[els$element %in% xc]
+      xcs <- ifelse( xb == xcb, 1, -1)
+      xcv <- rowSums(  crossprod (t(statement[, xc]),  xcs) )
+      xv <- statement[ , x]
+      if(length(xc) == 0) {
+        return(NULL)
+      }
+      err <- data.frame(
+        date = statement$endDate, 
+        elementId = x, 
+        expression = paste(ifelse(xcs == 1, "+", "-"), xc, collapse = " "),
+        original = xv,
+        calculated = xcv,
+        error = xv - xcv, 
+        stringsAsFactors = FALSE)
+      row.names(err) <- 1:nrow(err)
+      return(err)
+    })
+  )
+  class(err1) <- c("check", "data.frame")
+  return(err1)
+}
+
 
 #' Merge statement elements object
 #' 
@@ -494,11 +539,11 @@ merge.statements <- function(x, y, ...) {
 #' }
 #' @export
 calculate <- function(x, ..., digits = NULL) {
-
-  #dplyr::transmute_(x, endDate = ~endDate, .dots = lazyeval::lazy_dots(...))
-  res <- 
-    dplyr::transmute_(x, date = ~endDate, .dots = lazyeval::lazy_dots(...)) %>%
-    dplyr::select(everything(), -matches("^\\."))
+  # calculate
+  res <- dplyr::transmute_(x, date = ~endDate, .dots = lazyeval::lazy_dots(...))
+  # remove hidden columns (leading dots)
+  res <- res[grep("^[^\\.]", names(res))]
+  # rounding results
   if(!missing(digits)) {
     res[,2:ncol(res)] <- round(res[,2:ncol(res)], digits) 
   }
@@ -507,9 +552,27 @@ calculate <- function(x, ..., digits = NULL) {
 
 #' Define calculation
 #' @param ... formulas
+#' @param x not used
 #' @seealso \code{\link{do_calculation}}
+#' @examples
+#' \dontrun{
+#' 
+#' profit_margins <- calculation(
+#' 
+#'  Gross_Margin = 
+#'    (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
+#'  Operating_Margin =
+#'    OperatingIncomeLoss / SalesRevenueNet,
+#'  Net_Margin = 
+#'    NetIncomeLoss / SalesRevenueNet,
+#' 
+#'  digits = 2
+#' )
+#' 
+#' income_statement %>% do_calculation(profit_margins)
+#' }
 #' @export
-calculation <- function(...) {
+calculation <- function(..., x = NULL) {
   lazyeval::lazy(calculate(x, ...)) 
 }
 

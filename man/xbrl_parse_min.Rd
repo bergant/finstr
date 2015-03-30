@@ -29,4 +29,5 @@ xbrl_parse_min uses primitives from
 \seealso{
 \code{\link{xbrl_get_statements}}
 }
+\keyword{internal}
 

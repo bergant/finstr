@@ -10,6 +10,8 @@
 \item{x}{elements object}
 
 \item{descriptions}{prints labels or element IDs}
+
+\item{...}{further arguments passed to or from other methods.}
 }
 \description{
 Print elements object

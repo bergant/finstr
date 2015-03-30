@@ -87,6 +87,7 @@ print.statement <- function(x, ...) {
 #' Print elements object
 #' @param x elements object
 #' @param descriptions prints labels or element IDs
+#' @param ... further arguments passed to or from other methods.
 #' @keywords internal
 #' @export
 print.elements <- function(x, descriptions = FALSE, ...) {
@@ -102,5 +103,24 @@ print.elements <- function(x, descriptions = FALSE, ...) {
              paste0(substring(str_out, 1, 70), "..."),
              str_out)
     cat(str_out, "\n")
+  }
+}
+
+#' Print check object
+#' @param x check object
+#' @param ... further arguments passed to or from other methods.
+#' @keywords internal
+#' @export
+print.check <- function(x, ...) {
+  errors <- x[x$error != 0, ]
+  num_errors <- nrow(errors)
+  num_el_errors <- length(unique(errors[,"elementId"]))
+  cat("Number of errors: ", num_errors, "\n")
+  cat("Number of elements in errors: ", num_el_errors, "\n")
+  if(num_errors > 0) {
+    lapply( split(errors, errors$elementId), function(el) {
+      cat("\nElement:", el$elementId[1], " = ", el$expression[1], "\n" )
+      print.data.frame(el[,c("date", "original", "calculated", "error")])
+    })
   }
 }

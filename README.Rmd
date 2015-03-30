@@ -6,7 +6,6 @@ output:
 ---
 
 
-
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
 library(tidyr)
@@ -23,9 +22,9 @@ data in more structured form and process.
 For now it is offering:
 
 1. Data structure for financial statements in tidy and usable format
-2. Function to merge two reporting periods in single object
-3. Some helper functions to help explore and manipulate the data in the 
-structure
+2. Validate statement calculations
+3. Function to merge two reporting periods into single object
+4. Calculations on statements data and lagged difference calculation
 
 The idea in long term is to create an environment for reproducible financial 
 statement analysis. With existing packages like XBRL for XBRL parsing, 
@@ -67,7 +66,7 @@ balance_sheet2014 <- st2014$StatementOfFinancialPositionClassified
 income2013 <- st2013$StatementOfIncome
 income2014 <- st2014$StatementOfIncome
 balance_sheet2014
-income2014
+tail(income2014, 2)
 ```
 
 
@@ -81,6 +80,15 @@ bs_els <- get_elements(balance_sheet2014)
 
 Elements store concept descriptions, balance attribute (debit/credit) and 
 parent/child relationships between concepts.
+
+## Validate statement calculation hierarchy
+Recalculate higher order concepts from basic values and check for errors.
+
+```{r check}
+errors <- check_statement(balance_sheet2014)
+errors
+```
+
 
 ## Merge statements from different periods
 Use `merge` function to create single financial statement data from two 

@@ -4,13 +4,33 @@
 \alias{calculation}
 \title{Define calculation}
 \usage{
-calculation(...)
+calculation(..., x = NULL)
 }
 \arguments{
 \item{...}{formulas}
+
+\item{x}{not used}
 }
 \description{
 Define calculation
+}
+\examples{
+\dontrun{
+
+profit_margins <- calculation(
+
+ Gross_Margin =
+   (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
+ Operating_Margin =
+   OperatingIncomeLoss / SalesRevenueNet,
+ Net_Margin =
+   NetIncomeLoss / SalesRevenueNet,
+
+ digits = 2
+)
+
+income_statement \%>\% do_calculation(profit_margins)
+}
 }
 \seealso{
 \code{\link{do_calculation}}

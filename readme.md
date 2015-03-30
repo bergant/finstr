@@ -3,7 +3,6 @@
 
 
 
-
 **Warning: finstr package is in development. 
 Please use with caution.**
 
@@ -12,9 +11,9 @@ data in more structured form and process.
 For now it is offering:
 
 1. Data structure for financial statements in tidy and usable format
-2. Function to merge two reporting periods in single object
-3. Some helper functions to help explore and manipulate the data in the 
-structure
+2. Validate statement calculations
+3. Function to merge two reporting periods into single object
+4. Calculations on statements data and lagged difference calculation
 
 The idea in long term is to create an environment for reproducible financial 
 statement analysis. With existing packages like XBRL for XBRL parsing, 
@@ -106,11 +105,11 @@ balance_sheet2014
 ```
 
 ```r
-income2014
+tail(income2014, 2)
 ```
 
 ```
-## Financial statement: 3 observations from 2012-09-29 to 2014-09-27 
+## Financial statement: 2 observations from 2013-09-28 to 2014-09-27 
 ## Numbers in  000000 
 ##                                                    2014-09-27 2013-09-28
 ## NetIncomeLoss =                                     39510      37037    
@@ -123,19 +122,7 @@ income2014
 ##       + ResearchAndDevelopmentExpense                6041       4475    
 ##       + SellingGeneralAndAdministrativeExpense      11993      10830    
 ##   + NonoperatingIncomeExpense                         980       1156    
-## - IncomeTaxExpenseBenefitNA                         13973      13118    
-##                                                    2012-09-29
-## NetIncomeLoss =                                     41733    
-## + IncomeLossFromContinuingOperationsBeforeIncomeTa  55763    
-##   + OperatingIncomeLoss =                           55241    
-##     + GrossProfit =                                 68662    
-##       + SalesRevenueNet                            156508    
-##       - CostOfGoodsAndServicesSold                  87846    
-##     - OperatingExpenses =                           13421    
-##       + ResearchAndDevelopmentExpense                3381    
-##       + SellingGeneralAndAdministrativeExpense      10040    
-##   + NonoperatingIncomeExpense                         522    
-## - IncomeTaxExpenseBenefitNA                         14030
+## - IncomeTaxExpenseBenefitNA                         13973      13118
 ```
 
 
@@ -150,6 +137,21 @@ bs_els <- get_elements(balance_sheet2014)
 
 Elements store concept descriptions, balance attribute (debit/credit) and 
 parent/child relationships between concepts.
+
+## Validate statement calculation hierarchy
+Recalculate higher order concepts from basic values and check for errors.
+
+
+```r
+errors <- check_statement(balance_sheet2014)
+errors
+```
+
+```
+## Number of errors:  0 
+## Number of elements in errors:  0
+```
+
 
 ## Merge statements from different periods
 Use `merge` function to create single financial statement data from two 
