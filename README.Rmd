@@ -274,7 +274,7 @@ Both main groups are divided to only 3 smaller chunks (based on liquidity).
 To plot the result we need to run the calculations on a balance sheet and call
 graph plotting function:
 
-```{r graph1, fig.width=7.3}
+```{r graph1, fig.width=7.3, fig.height=3.5}
 
 balance_sheet %>% 
   do_calculation(two_sided_bs_calculation) %>%
@@ -285,7 +285,7 @@ balance_sheet %>%
 Another option is to group by date and see assets close to liabilities for
 every year:
 
-```{r graph2, fig.width=7.3}
+```{r graph2, fig.width=7.3, fig.height=3.5}
 
 balance_sheet %>% 
   do_calculation(two_sided_bs_calculation) %>%
@@ -296,7 +296,7 @@ balance_sheet %>%
 ## See the difference
 We can use the same custom hierarchy on lagged differences.
 
-```{r graph3, fig.width=8}
+```{r graph3, fig.width=7.3, fig.height=3.5}
 
 balance_sheet %>%
   diff() %>%
