@@ -1,0 +1,124 @@
+---
+title: "Visualize Balance Sheets"
+author: "Darko Bergant"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Visualize Balance Sheets}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+
+```{r, echo=FALSE, results='hide', message=FALSE }
+library(dplyr)
+library(tidyr)
+library(finstr)
+data(xbrl_data_aapl2013)
+data(xbrl_data_aapl2014)
+```
+
+**Warning: finstr package is in development. 
+Please use with caution.**
+
+## Get data
+Use XBRL package to parse XBRL files. For example:
+```{r xbrl_parse_min, eval=FALSE, echo=TRUE}
+library(XBRL)
+# parse XBRL (Apple 10-K report)
+xbrl_url2014 <- 
+  "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml"
+xbrl_url2013 <- 
+  "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
+xbrl_data_aapl2014 <- xbrlDoAll(xbrl_url2014)
+xbrl_data_aapl2013 <- xbrlDoAll(xbrl_url2013)
+```
+
+## Prepare statements
+With `xbrl_get_statements` convert XBRL data to *statements* object. 
+```{r xbrl_get_statements}
+library(finstr)
+
+st2013 <- xbrl_get_statements(xbrl_data_aapl2013)
+st2014 <- xbrl_get_statements(xbrl_data_aapl2014)
+# merge all statements
+st_all <- merge( st2013, st2014 )
+# get balance sheets 
+balance_sheet <- st_all$StatementOfFinancialPositionClassified
+tail(balance_sheet,2)
+
+```
+
+## Prepare custom calculation hierarchy
+There is no human readable way to plot every number of the balance sheet in 
+one graph.
+The only way to plot a balance sheet is to plot it several times. 
+Each graph should have a limited number of highlited features.
+The first step is to break a balance sheet to a small number of pieces.
+We can use calculations to specify these groups of elements.
+
+```{r custom_hierarchy}
+
+two_sided_bs_calculation <- 
+  list(
+    "Assets" = calculation(
+      "Cash and Equivalents" = CashAndCashEquivalentsAtCarryingValue,
+      "Other Current Assets" = AssetsCurrent - CashAndCashEquivalentsAtCarryingValue,
+      "Other Assets" = Assets - AssetsCurrent
+    ),
+    
+    "Liabilities and Equity" = calculation(
+      "Current Liabilities" = LiabilitiesCurrent,
+      "Other Liabilities" =  Liabilities - LiabilitiesCurrent,
+      "Stockholders Equity" = StockholdersEquity
+    )
+  )
+
+```
+
+We divided balance sheet to **Assets** and **Liabilities and Equity**. 
+Both main groups are divided to only 3 smaller chunks (based on liquidity). 
+
+To plot the result we need to run the calculations on a balance sheet and call
+graph plotting function:
+
+```{r graph1, fig.width=7.3}
+
+balance_sheet %>% 
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar()
+
+```
+
+Another option is to group by date and see assets close to liabilities for
+every year:
+
+```{r graph2, fig.width=7.3}
+
+balance_sheet %>% 
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar(by_date = TRUE)
+
+```
+
+## See the difference
+We can use the same custom hierarchy on lagged differences.
+
+```{r graph3, fig.width=7.3}
+
+balance_sheet %>%
+  diff() %>%
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar(
+    by_date = TRUE, is_diff = TRUE, 
+    dif_labels = c("Money\nconsumption","Money\nsupply"))
+
+```
+
+
+
+
+
+
+
+

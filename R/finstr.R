@@ -522,7 +522,9 @@ merge.statements <- function(x, y, ...) {
 #' 
 #' @param x a statement object
 #' @param ... list of formulas
-#' @param digits if specified the results will be rounded according to number of digits
+#' @param digits if specified the result will be rounded according to number of digits
+#' @param decimals if specified the result will be multiplied by 10^decimals
+#' @return data frame with date and specified columns
 #' @examples
 #' \dontrun{
 #' 
@@ -537,8 +539,9 @@ merge.statements <- function(x, y, ...) {
 #'       ) / LiabilitiesCurrent
 #' )
 #' }
+#' @seealso \code{\link{calculation}}
 #' @export
-calculate <- function(x, ..., digits = NULL) {
+calculate <- function(x, ..., digits = NULL, decimals = NULL) {
   # calculate
   res <- dplyr::transmute_(x, date = ~endDate, .dots = lazyeval::lazy_dots(...))
   # remove hidden columns (leading dots)
@@ -547,26 +550,26 @@ calculate <- function(x, ..., digits = NULL) {
   if(!missing(digits)) {
     res[,2:ncol(res)] <- round(res[,2:ncol(res)], digits) 
   }
+  if(missing(decimals)) {
+    decimals <- min(x[["decimals"]], na.rm = TRUE)
+  }
+  if(!is.na(decimals)) {
+    res[,2:ncol(res)] <- res[,2:ncol(res)] * 10 ^ decimals 
+  }
   return(res)
 }
 
 #' Define calculation
 #' @param ... formulas
 #' @param x not used
-#' @seealso \code{\link{do_calculation}}
+#' @seealso \code{\link{do_calculation}} and  \code{\link{calculate}}
 #' @examples
 #' \dontrun{
 #' 
 #' profit_margins <- calculation(
-#' 
-#'  Gross_Margin = 
-#'    (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
-#'  Operating_Margin =
-#'    OperatingIncomeLoss / SalesRevenueNet,
-#'  Net_Margin = 
-#'    NetIncomeLoss / SalesRevenueNet,
-#' 
-#'  digits = 2
+#'  Gross_Margin = (SalesRevenueNet - CostOfGoodsAndServicesSold) / SalesRevenueNet,
+#'  Operating_Margin = OperatingIncomeLoss / SalesRevenueNet,
+#'  Net_Margin = NetIncomeLoss / SalesRevenueNet
 #' )
 #' 
 #' income_statement %>% do_calculation(profit_margins)
@@ -576,13 +579,36 @@ calculation <- function(..., x = NULL) {
   lazyeval::lazy(calculate(x, ...)) 
 }
 
-#' Run the calculation
+#' Run a calculation
+#' @description Calculations can be defined with \code{\link{calculation}} 
+#'  function.
+#'  With \code{\link{do_calculation}} the calculations get calculated on a 
+#'  specified statement.
+#'  Resulting data frame (or data frames if there are several calculations) has 
+#'  a date column and the columns defined with calculations. 
 #' @param x statement object
-#' @param calculation a calculation expression
+#' @param ... one or more calculations
+#' @return a data frame or a list of data frames
 #' @seealso \code{\link{calculation}}
 #' @export
-do_calculation <- function(x, calculation) {
-  lazyeval::lazy_eval(calculation, list(x = x))
+do_calculation <- function(x, ...) {
+  calculations <- list(...)
+
+  # accept a list as an argument
+  if(length(calculations) == 1 && "list" %in% class(calculations[[1]])) {
+    calculations <- calculations[[1]]
+  }
+
+  res <- 
+    lapply(calculations, function(calc) {
+      lazyeval::lazy_eval(calc, list(x = x))
+    })
+
+  # simplify to calculation
+  if(length(res) == 1 && "list" %in% class(calculations)) {
+    res <- res[[1]]
+  }
+  return(res)
 }
 
 

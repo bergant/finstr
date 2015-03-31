@@ -2,17 +2,25 @@
 % Please edit documentation in R/finstr.R
 \name{do_calculation}
 \alias{do_calculation}
-\title{Run the calculation}
+\title{Run a calculation}
 \usage{
-do_calculation(x, calculation)
+do_calculation(x, ...)
 }
 \arguments{
 \item{x}{statement object}
 
-\item{calculation}{a calculation expression}
+\item{...}{one or more calculations}
+}
+\value{
+a data frame or a list of data frames
 }
 \description{
-Run the calculation
+Calculations can be defined with \code{\link{calculation}}
+ function.
+ With \code{\link{do_calculation}} the calculations get calculated on a
+ specified statement.
+ Resulting data frame (or data frames if there are several calculations) has
+ a date column and the columns defined with calculations.
 }
 \seealso{
 \code{\link{calculation}}

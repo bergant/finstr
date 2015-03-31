@@ -25,7 +25,7 @@ data in more structured form and process.
 For now it is offering:
 
 1. Data structure for financial statements in tidy and usable format
-2. Validate statement calculations
+2. Validation of statement calculation
 3. Function to merge two reporting periods into single object
 4. Calculations on statements data and lagged difference calculation
 
@@ -220,6 +220,7 @@ profit_margins <- calculation(
 # run profit margins for two different statements
 income2013 %>% do_calculation(profit_margins)
 income2014 %>% do_calculation(profit_margins)
+
 
 ```
 

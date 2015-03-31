@@ -18,21 +18,15 @@ Define calculation
 \dontrun{
 
 profit_margins <- calculation(
-
- Gross_Margin =
-   (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
- Operating_Margin =
-   OperatingIncomeLoss / SalesRevenueNet,
- Net_Margin =
-   NetIncomeLoss / SalesRevenueNet,
-
- digits = 2
+ Gross_Margin = (SalesRevenueNet - CostOfGoodsAndServicesSold) / SalesRevenueNet,
+ Operating_Margin = OperatingIncomeLoss / SalesRevenueNet,
+ Net_Margin = NetIncomeLoss / SalesRevenueNet
 )
 
 income_statement \%>\% do_calculation(profit_margins)
 }
 }
 \seealso{
-\code{\link{do_calculation}}
+\code{\link{do_calculation}} and  \code{\link{calculate}}
 }
 

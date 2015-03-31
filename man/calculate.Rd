@@ -4,14 +4,19 @@
 \alias{calculate}
 \title{Calculate formulas}
 \usage{
-calculate(x, ..., digits = NULL)
+calculate(x, ..., digits = NULL, decimals = NULL)
 }
 \arguments{
 \item{x}{a statement object}
 
 \item{...}{list of formulas}
 
-\item{digits}{if specified the results will be rounded according to number of digits}
+\item{digits}{if specified the result will be rounded according to number of digits}
+
+\item{decimals}{if specified the result will be multiplied by 10^decimals}
+}
+\value{
+data frame with date and specified columns
 }
 \description{
 Calculate formulas
@@ -30,5 +35,8 @@ balance_sheet \%>\% calculate(
       ) / LiabilitiesCurrent
 )
 }
+}
+\seealso{
+\code{\link{calculation}}
 }
 

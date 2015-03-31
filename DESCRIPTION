@@ -17,5 +17,6 @@ Imports:
     RCurl,
     lazyeval
 Suggests: testthat,
-    knitr
+    knitr,
+    ggplot2
 VignetteBuilder: knitr
