@@ -1,10 +1,17 @@
 ---
-title: finstr - Financial Statements in R 
+title: "finstr - Financial Statements in R"
 output:
-  html_document:
-    keep_md: yes
+  md_document:
+    variant: markdown_github
 ---
 
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "IMG/README-"
+)
+```
 
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
@@ -289,7 +296,7 @@ balance_sheet %>%
 ## See the difference
 We can use the same custom hierarchy on lagged differences.
 
-```{r graph3, fig.width=7.3}
+```{r graph3, fig.width=8}
 
 balance_sheet %>%
   diff() %>%
