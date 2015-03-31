@@ -169,7 +169,7 @@ By using `calculate` function we can achieve the same result with less verbose l
 ``` {.r}
 library(dplyr)
 
-balance_sheet %>% calculate(
+balance_sheet %>% calculate( digits = 2,
   
     Current_Ratio = AssetsCurrent / LiabilitiesCurrent,
     
@@ -180,10 +180,10 @@ balance_sheet %>% calculate(
         ) / LiabilitiesCurrent
     
 )
-#>         date Current_Ratio  Quick_Ratio
-#> 1 2012-09-29  1.495849e-06 1.039360e-06
-#> 2 2013-09-28  1.678639e-06 1.228824e-06
-#> 3 2014-09-27  1.080113e-06 6.704230e-07
+#>         date Current_Ratio Quick_Ratio
+#> 1 2012-09-29          1.50        1.04
+#> 2 2013-09-28          1.68        1.23
+#> 3 2014-09-27          1.08        0.67
 ```
 
 If we need a period average value we can use a `lag` function. For example, to calculate *DSO* (days sales outstanding) over longer periods the average of account receivable is compared to net sales.
@@ -198,7 +198,7 @@ In this case we need to connect two type of statements: balance sheets and incom
 
 balance_sheet %>%
   inner_join( st_all$StatementOfIncome, by = "endDate") %>%
-  calculate(
+  calculate( digits = 2,
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
     DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
@@ -207,8 +207,8 @@ balance_sheet %>%
 #> min; returning Inf
 #>         date DaysSalesOutstanding
 #> 1 2012-09-29                   NA
-#> 2 2013-09-28                  Inf
-#> 3 2014-09-27                  Inf
+#> 2 2013-09-28                25.66
+#> 3 2014-09-27                30.51
 ```
 
 The leading dot instructs the calculate function to hide the value. In our case only DaysSalesOutstanding is selected in final result.
@@ -231,10 +231,10 @@ st_all$StatementOfIncome %>% calculate( digits = 2,
 
   ) 
 #>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2011-09-24      4.0e-07          3.1e-07    2.4e-07
-#> 2 2012-09-29      4.4e-07          3.5e-07    2.7e-07
-#> 3 2013-09-28      3.8e-07          2.9e-07    2.2e-07
-#> 4 2014-09-27      3.9e-07          2.9e-07    2.2e-07
+#> 1 2011-09-24         0.40             0.31       0.24
+#> 2 2012-09-29         0.44             0.35       0.27
+#> 3 2013-09-28         0.38             0.29       0.22
+#> 4 2014-09-27         0.39             0.29       0.22
 ```
 
 When running same calculation for different statements, store the calculation with `calculation` and run with `do_calculation`:
@@ -252,20 +252,20 @@ profit_margins <- calculation(
   Net_Margin = 
     NetIncomeLoss / SalesRevenueNet,
   
-  digits = 3
+  digits = 2
 )
 
 # run profit margins for two different statements
 income2013 %>% do_calculation(profit_margins)
 #>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2011-09-24     4.05e-07         3.12e-07   2.39e-07
-#> 2 2012-09-29     4.39e-07         3.53e-07   2.67e-07
-#> 3 2013-09-28     3.76e-07         2.87e-07   2.17e-07
+#> 1 2011-09-24         0.40             0.31       0.24
+#> 2 2012-09-29         0.44             0.35       0.27
+#> 3 2013-09-28         0.38             0.29       0.22
 income2014 %>% do_calculation(profit_margins)
 #>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2012-09-29     4.39e-07         3.53e-07   2.67e-07
-#> 2 2013-09-28     3.76e-07         2.87e-07   2.17e-07
-#> 3 2014-09-27     3.86e-07         2.87e-07   2.16e-07
+#> 1 2012-09-29         0.44             0.35       0.27
+#> 2 2013-09-28         0.38             0.29       0.22
+#> 3 2014-09-27         0.39             0.29       0.22
 ```
 
 Lagged difference

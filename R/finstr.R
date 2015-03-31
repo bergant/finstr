@@ -553,7 +553,7 @@ calculate <- function(x, ..., digits = NULL, decimals = NULL) {
   if(missing(decimals)) {
     decimals <- min(x[["decimals"]], na.rm = TRUE)
   }
-  if(!is.na(decimals)) {
+  if(!is.na(decimals) && missing(digits)) {
     res[,2:ncol(res)] <- res[,2:ncol(res)] * 10 ^ decimals 
   }
   return(res)

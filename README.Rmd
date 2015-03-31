@@ -142,7 +142,7 @@ less verbose language. Lets calculate now two ratios:
 ```{r calculate}
 library(dplyr)
 
-balance_sheet %>% calculate(
+balance_sheet %>% calculate( digits = 2,
   
     Current_Ratio = AssetsCurrent / LiabilitiesCurrent,
     
@@ -172,7 +172,7 @@ with joining two data frames:
 
 balance_sheet %>%
   inner_join( st_all$StatementOfIncome, by = "endDate") %>%
-  calculate(
+  calculate( digits = 2,
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
     DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
@@ -218,7 +218,7 @@ profit_margins <- calculation(
   Net_Margin = 
     NetIncomeLoss / SalesRevenueNet,
   
-  digits = 3
+  digits = 2
 )
 
 # run profit margins for two different statements
