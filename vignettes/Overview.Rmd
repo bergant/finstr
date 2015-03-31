@@ -34,6 +34,12 @@ statement analysis. With existing packages like XBRL for XBRL parsing,
 dplyr for data manipulation and knitr for reproducible research, this 
 shouldn't be a long journey.
 
+## Install finstr
+finstr is not on CRAN. You have to install it from github. 
+```{r, eval=FALSE}
+library(devtools)
+install_github("bergant/finstr")
+```
 
 ## Get data
 Use XBRL package to parse XBRL files. For example:

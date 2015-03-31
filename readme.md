@@ -222,10 +222,10 @@ balance_sheet %>% calculate(
 ```
 
 ```
-##         date Current_Ratio Quick_Ratio
-## 1 2012-09-29      1.495849    1.039360
-## 2 2013-09-28      1.678639    1.228824
-## 3 2014-09-27      1.080113    0.670423
+##         date Current_Ratio  Quick_Ratio
+## 1 2012-09-29  1.495849e-06 1.039360e-06
+## 2 2013-09-28  1.678639e-06 1.228824e-06
+## 3 2014-09-27  1.080113e-06 6.704230e-07
 ```
 
 
@@ -253,10 +253,15 @@ balance_sheet %>%
 ```
 
 ```
+## Warning in min(x[["decimals"]], na.rm = TRUE): no non-missing arguments to
+## min; returning Inf
+```
+
+```
 ##         date DaysSalesOutstanding
 ## 1 2012-09-29                   NA
-## 2 2013-09-28             25.66169
-## 3 2014-09-27             30.51268
+## 2 2013-09-28                  Inf
+## 3 2014-09-27                  Inf
 ```
 
 The leading dot instructs the calculate function to hide the value. In our case
@@ -282,10 +287,10 @@ st_all$StatementOfIncome %>% calculate( digits = 2,
 
 ```
 ##         date Gross_Margin Operating_Margin Net_Margin
-## 1 2011-09-24         0.40             0.31       0.24
-## 2 2012-09-29         0.44             0.35       0.27
-## 3 2013-09-28         0.38             0.29       0.22
-## 4 2014-09-27         0.39             0.29       0.22
+## 1 2011-09-24      4.0e-07          3.1e-07    2.4e-07
+## 2 2012-09-29      4.4e-07          3.5e-07    2.7e-07
+## 3 2013-09-28      3.8e-07          2.9e-07    2.2e-07
+## 4 2014-09-27      3.9e-07          2.9e-07    2.2e-07
 ```
 
 When running same calculation for different statements, store the
@@ -313,9 +318,9 @@ income2013 %>% do_calculation(profit_margins)
 
 ```
 ##         date Gross_Margin Operating_Margin Net_Margin
-## 1 2011-09-24        0.405            0.312      0.239
-## 2 2012-09-29        0.439            0.353      0.267
-## 3 2013-09-28        0.376            0.287      0.217
+## 1 2011-09-24     4.05e-07         3.12e-07   2.39e-07
+## 2 2012-09-29     4.39e-07         3.53e-07   2.67e-07
+## 3 2013-09-28     3.76e-07         2.87e-07   2.17e-07
 ```
 
 ```r
@@ -324,9 +329,9 @@ income2014 %>% do_calculation(profit_margins)
 
 ```
 ##         date Gross_Margin Operating_Margin Net_Margin
-## 1 2012-09-29        0.439            0.353      0.267
-## 2 2013-09-28        0.376            0.287      0.217
-## 3 2014-09-27        0.386            0.287      0.216
+## 1 2012-09-29     4.39e-07         3.53e-07   2.67e-07
+## 2 2013-09-28     3.76e-07         2.87e-07   2.17e-07
+## 3 2014-09-27     3.86e-07         2.87e-07   2.16e-07
 ```
 
 
@@ -374,3 +379,74 @@ balance_sheet %>% diff()
 ##   + AccumulatedOtherComprehensiveIncomeLossNetOfTa   1553       -970    
 ##   + CommonStocksIncludingAdditionalPaidInCapitalNA   3549      19764
 ```
+
+
+# Balance sheet visualization
+
+## Prepare custom calculation hierarchy
+There is no human readable way to plot every number of the balance sheet in 
+one graph.
+The only way to plot a balance sheet is to plot it several times. 
+Each graph should have a limited number of highlited features.
+The first step is to break a balance sheet to a small number of pieces.
+We can use calculations to specify these groups of elements.
+
+
+```r
+two_sided_bs_calculation <- 
+  list(
+    "Assets" = calculation(
+      "Cash and Equivalents" = CashAndCashEquivalentsAtCarryingValue,
+      "Other Current Assets" = AssetsCurrent - CashAndCashEquivalentsAtCarryingValue,
+      "Other Assets" = Assets - AssetsCurrent
+    ),
+    
+    "Liabilities and Equity" = calculation(
+      "Current Liabilities" = LiabilitiesCurrent,
+      "Other Liabilities" =  Liabilities - LiabilitiesCurrent,
+      "Stockholders Equity" = StockholdersEquity
+    )
+  )
+```
+
+We divided balance sheet to **Assets** and **Liabilities and Equity**. 
+Both main groups are divided to only 3 smaller chunks (based on liquidity). 
+
+To plot the result we need to run the calculations on a balance sheet and call
+graph plotting function:
+
+
+```r
+balance_sheet %>% 
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar()
+```
+
+![](README_files/figure-html/graph1-1.png) 
+
+Another option is to group by date and see assets close to liabilities for
+every year:
+
+
+```r
+balance_sheet %>% 
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar(by_date = TRUE)
+```
+
+![](README_files/figure-html/graph2-1.png) 
+
+## See the difference
+We can use the same custom hierarchy on lagged differences.
+
+
+```r
+balance_sheet %>%
+  diff() %>%
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar(
+    by_date = TRUE, is_diff = TRUE, 
+    dif_labels = c("Money\nconsumption","Money\nsupply"))
+```
+
+![](README_files/figure-html/graph3-1.png) 

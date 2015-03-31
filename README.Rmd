@@ -230,3 +230,72 @@ The result is statement of changes between successive years:
 balance_sheet %>% diff()
 
 ```
+
+
+# Balance sheet visualization
+
+## Prepare custom calculation hierarchy
+There is no human readable way to plot every number of the balance sheet in 
+one graph.
+The only way to plot a balance sheet is to plot it several times. 
+Each graph should have a limited number of highlited features.
+The first step is to break a balance sheet to a small number of pieces.
+We can use calculations to specify these groups of elements.
+
+```{r custom_hierarchy}
+
+two_sided_bs_calculation <- 
+  list(
+    "Assets" = calculation(
+      "Cash and Equivalents" = CashAndCashEquivalentsAtCarryingValue,
+      "Other Current Assets" = AssetsCurrent - CashAndCashEquivalentsAtCarryingValue,
+      "Other Assets" = Assets - AssetsCurrent
+    ),
+    
+    "Liabilities and Equity" = calculation(
+      "Current Liabilities" = LiabilitiesCurrent,
+      "Other Liabilities" =  Liabilities - LiabilitiesCurrent,
+      "Stockholders Equity" = StockholdersEquity
+    )
+  )
+
+```
+
+We divided balance sheet to **Assets** and **Liabilities and Equity**. 
+Both main groups are divided to only 3 smaller chunks (based on liquidity). 
+
+To plot the result we need to run the calculations on a balance sheet and call
+graph plotting function:
+
+```{r graph1, fig.width=7.3}
+
+balance_sheet %>% 
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar()
+
+```
+
+Another option is to group by date and see assets close to liabilities for
+every year:
+
+```{r graph2, fig.width=7.3}
+
+balance_sheet %>% 
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar(by_date = TRUE)
+
+```
+
+## See the difference
+We can use the same custom hierarchy on lagged differences.
+
+```{r graph3, fig.width=7.3}
+
+balance_sheet %>%
+  diff() %>%
+  do_calculation(two_sided_bs_calculation) %>%
+  plot_double_stacked_bar(
+    by_date = TRUE, is_diff = TRUE, 
+    dif_labels = c("Money\nconsumption","Money\nsupply"))
+
+```
