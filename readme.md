@@ -348,7 +348,7 @@ balance_sheet %>%
   plot_double_stacked_bar()
 ```
 
-![](IMG/README-graph1-1.png)
+![](img/README-graph1-1.png)
 
 Another option is to group by date and see assets close to liabilities for every year:
 
@@ -359,7 +359,7 @@ balance_sheet %>%
   plot_double_stacked_bar(by_date = TRUE)
 ```
 
-![](IMG/README-graph2-1.png)
+![](img/README-graph2-1.png)
 
 See the difference
 ------------------
@@ -376,4 +376,4 @@ balance_sheet %>%
     dif_labels = c("Money\nconsumption","Money\nsupply"))
 ```
 
-![](IMG/README-graph3-1.png)
+![](img/README-graph3-1.png)

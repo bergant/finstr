@@ -9,7 +9,7 @@ output:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "IMG/README-"
+  fig.path = "img/README-"
 )
 ```
 
