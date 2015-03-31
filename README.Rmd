@@ -13,6 +13,8 @@ knitr::opts_chunk$set(
 )
 ```
 
+
+
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
 library(tidyr)
@@ -29,7 +31,7 @@ data in more structured form and process.
 For now it is offering:
 
 1. Data structure for financial statements in tidy and usable format
-2. Validate statement calculations
+2. Validation of statement calculation
 3. Function to merge two reporting periods into single object
 4. Calculations on statements data and lagged difference calculation
 
@@ -142,7 +144,7 @@ less verbose language. Lets calculate now two ratios:
 ```{r calculate}
 library(dplyr)
 
-balance_sheet %>% calculate( digits = 2,
+balance_sheet %>% calculate(
   
     Current_Ratio = AssetsCurrent / LiabilitiesCurrent,
     
@@ -165,14 +167,13 @@ We will use the formula for yearly preiods:
 $$ DSO = \frac{Average Accounts Receivable}{Sales Revenue} \times 365 $$
 
 In this case we need to connect two type of statements: balance sheets and
-income statements. With matching reporting periods it can be accomplished 
-with joining two data frames:
+income statements. 
 
 ```{r DaysSalesOutstanding}
 
 balance_sheet %>%
-  inner_join( st_all$StatementOfIncome, by = "endDate") %>%
-  calculate( digits = 2,
+  join( st_all$StatementOfIncome ) %>%
+  calculate(
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
     DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
@@ -180,7 +181,10 @@ balance_sheet %>%
 
 ```
 
-The leading dot instructs the calculate function to hide the value. In our case
+Function `join` is used to join two different statements in the same period.
+We used merge for merging two statements of the same type and different period.
+
+The leading dot instructs the calculate function to hide the values. In our case
 only DaysSalesOutstanding is selected in final result.
 
 Use digits parameter to control rounding:
@@ -218,12 +222,13 @@ profit_margins <- calculation(
   Net_Margin = 
     NetIncomeLoss / SalesRevenueNet,
   
-  digits = 2
+  digits = 3
 )
 
 # run profit margins for two different statements
 income2013 %>% do_calculation(profit_margins)
 income2014 %>% do_calculation(profit_margins)
+
 
 ```
 
@@ -237,6 +242,7 @@ The result is statement of changes between successive years:
 balance_sheet %>% diff()
 
 ```
+
 
 
 # Balance sheet visualization

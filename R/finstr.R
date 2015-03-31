@@ -219,7 +219,7 @@ get_elements_h <- function(elements) {
   df1 <- elements %>%
     dplyr::filter_(~is.na(parentId)) %>%
     dplyr::mutate(id = "")
-  
+
   while({
     level_str <- 
       unname(unlist(lapply(split(df1$id, df1$id), function(x) {
@@ -227,7 +227,9 @@ get_elements_h <- function(elements) {
       })))
     
     elements[elements$elementId %in% df1$elementId, "level"] <- level
+    to_update <- elements[elements$elementId %in% df1$elementId, "elementId"]
     elements[ 
+      #order(match(elements$elementId, to_update))[1:length(level_str)], 
       order(match(elements$elementId, df1$elementId))[1:length(level_str)], 
       "id"] <- level_str
     
@@ -235,7 +237,8 @@ get_elements_h <- function(elements) {
       dplyr::filter_(~parentId %in% df1$elementId) %>%
       dplyr::arrange_(~order) %>%
       dplyr::select_(~elementId, ~parentId) %>%
-      dplyr::left_join(elements, by=c("parentId"="elementId"))
+      dplyr::left_join(elements, by=c("parentId"="elementId")) %>%
+      dplyr::arrange_(~id)
     nrow(df1) > 0})
   {
     level <- level + 1
@@ -481,11 +484,12 @@ merge.statement <- function(x, y, ...) {
   # replace NAs in values by zeros
   z[,5:ncol(z)][is.na(z[,5:ncol(z)])] <- 0
   # remove duplicated rows (based on periods)
-  z <- z[!duplicated(z[c("startDate", "endDate")], fromLast = TRUE), ]
+  z <- z[!duplicated(z[c("endDate")], fromLast = TRUE), ]
   # order rows by endDate
   z <- z[order(z$endDate), ]
   # order columns based on original taxonomy
   z <- z[,c(names(z)[1:4], el_z[["elementId"]])]
+  #if(!any(duplicated(z$contextId)))
   row.names(z) <- z$contextId
   # add attributes
   class(z) <- class(x)
@@ -493,6 +497,8 @@ merge.statement <- function(x, y, ...) {
   attr(z, "role_id") <- attr(x, "role_id")
   return(z)  
 }
+
+
 
 #' Merge two lists of statements
 #' 
@@ -517,6 +523,26 @@ merge.statements <- function(x, y, ...) {
   class(z) <- "statements"
   return(z)
 }
+
+#' Join two statements
+#' @description Use join for different statements in the same period.
+#' Use merge for merging two periods of the same type of statement
+#' @param x a statement object
+#' @param y a statement object
+#' @seealso \link{merge.statement} for merging two statements
+#' @return a statement object
+#' @export
+join <- function(x, y) {
+  
+  col_pos <- which(names(y) %in% c("contextId", "startDate", "decimals"))
+  z <- 
+    x %>%
+    dplyr::left_join(y[,-col_pos], by = "endDate")
+  attr(z, "elements") <- get_elements_h(merge(get_elements(x), get_elements(y)))
+  class(z) <- c("statement", "data.frame")
+  return(z)
+}
+
 
 #' Calculate formulas 
 #' 
@@ -551,9 +577,15 @@ calculate <- function(x, ..., digits = NULL, decimals = NULL) {
     res[,2:ncol(res)] <- round(res[,2:ncol(res)], digits) 
   }
   if(missing(decimals)) {
-    decimals <- min(x[["decimals"]], na.rm = TRUE)
+    if(!is.null(x[["decimals"]])) {
+      decimals <- min(x[["decimals"]], na.rm = TRUE)
+    }
+    if(!is.null(x[["decimals.x"]])) {
+      decimals <- min(x[["decimals.x"]], na.rm = TRUE)
+    }
   }
-  if(!is.na(decimals) && missing(digits)) {
+  if(!is.null(decimals) && !is.na(decimals) && 
+       max(abs(res[1:5,2:ncol(res)]), na.rm = TRUE)>10^(-decimals)) {
     res[,2:ncol(res)] <- res[,2:ncol(res)] * 10 ^ decimals 
   }
   return(res)

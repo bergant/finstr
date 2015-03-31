@@ -3,7 +3,7 @@
 The purpose of finstr package is to use financial statements data in more structured form and process. For now it is offering:
 
 1.  Data structure for financial statements in tidy and usable format
-2.  Validate statement calculations
+2.  Validation of statement calculation
 3.  Function to merge two reporting periods into single object
 4.  Calculations on statements data and lagged difference calculation
 
@@ -169,7 +169,7 @@ By using `calculate` function we can achieve the same result with less verbose l
 ``` {.r}
 library(dplyr)
 
-balance_sheet %>% calculate( digits = 2,
+balance_sheet %>% calculate(
   
     Current_Ratio = AssetsCurrent / LiabilitiesCurrent,
     
@@ -181,9 +181,9 @@ balance_sheet %>% calculate( digits = 2,
     
 )
 #>         date Current_Ratio Quick_Ratio
-#> 1 2012-09-29          1.50        1.04
-#> 2 2013-09-28          1.68        1.23
-#> 3 2014-09-27          1.08        0.67
+#> 1 2012-09-29      1.495849    1.039360
+#> 2 2013-09-28      1.678639    1.228824
+#> 3 2014-09-27      1.080113    0.670423
 ```
 
 If we need a period average value we can use a `lag` function. For example, to calculate *DSO* (days sales outstanding) over longer periods the average of account receivable is compared to net sales.
@@ -192,26 +192,26 @@ We will use the formula for yearly preiods:
 
 \[ DSO = \frac{Average Accounts Receivable}{Sales Revenue} \times 365 \]
 
-In this case we need to connect two type of statements: balance sheets and income statements. With matching reporting periods it can be accomplished with joining two data frames:
+In this case we need to connect two type of statements: balance sheets and income statements.
 
 ``` {.r}
 
 balance_sheet %>%
-  inner_join( st_all$StatementOfIncome, by = "endDate") %>%
-  calculate( digits = 2,
+  join( st_all$StatementOfIncome ) %>%
+  calculate(
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
     DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
   )
-#> Warning in min(x[["decimals"]], na.rm = TRUE): no non-missing arguments to
-#> min; returning Inf
 #>         date DaysSalesOutstanding
 #> 1 2012-09-29                   NA
-#> 2 2013-09-28                25.66
-#> 3 2014-09-27                30.51
+#> 2 2013-09-28             25.66169
+#> 3 2014-09-27             30.51268
 ```
 
-The leading dot instructs the calculate function to hide the value. In our case only DaysSalesOutstanding is selected in final result.
+Function `join` is used to join two different statements in the same period. We used merge for merging two statements of the same type and different period.
+
+The leading dot instructs the calculate function to hide the values. In our case only DaysSalesOutstanding is selected in final result.
 
 Use digits parameter to control rounding:
 
@@ -252,20 +252,20 @@ profit_margins <- calculation(
   Net_Margin = 
     NetIncomeLoss / SalesRevenueNet,
   
-  digits = 2
+  digits = 3
 )
 
 # run profit margins for two different statements
 income2013 %>% do_calculation(profit_margins)
 #>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2011-09-24         0.40             0.31       0.24
-#> 2 2012-09-29         0.44             0.35       0.27
-#> 3 2013-09-28         0.38             0.29       0.22
+#> 1 2011-09-24        0.405            0.312      0.239
+#> 2 2012-09-29        0.439            0.353      0.267
+#> 3 2013-09-28        0.376            0.287      0.217
 income2014 %>% do_calculation(profit_margins)
 #>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2012-09-29         0.44             0.35       0.27
-#> 2 2013-09-28         0.38             0.29       0.22
-#> 3 2014-09-27         0.39             0.29       0.22
+#> 1 2012-09-29        0.439            0.353      0.267
+#> 2 2013-09-28        0.376            0.287      0.217
+#> 3 2014-09-27        0.386            0.287      0.216
 ```
 
 Lagged difference
