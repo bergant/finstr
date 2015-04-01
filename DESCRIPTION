@@ -14,7 +14,6 @@ Imports:
     dplyr,
     tidyr,
     XBRL,
-    RCurl,
     lazyeval
 Suggests: testthat,
     knitr,

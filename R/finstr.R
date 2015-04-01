@@ -53,71 +53,6 @@ xbrl_create_data <-function() {
   
 }
 
-#' Parse XBRL
-#' 
-#' @description Parse XBRL files
-#' @details xbrl_parse_min uses primitives from 
-#'  \link[XBRL]{XBRL-package} to parse only necessary information needed to 
-#'  convert XBRL to statement object with \code{\link{xbrl_get_statements}} 
-#'  function. 
-#'  It is slightly faster than \code{\link{xbrlDoAll}} but it does not parse 
-#'  all the data. 
-#'  It parses only roles, elements, contexts, facts and calculation base link. 
-#' @param xbrl_file file path or url to XBRL file
-#' @param parse_labels if element labels should be parsed (default to FALSE)
-#' @return xbrl_data object
-#' @seealso \code{\link{xbrl_get_statements}}
-#' @keywords internal
-#' @export
-xbrl_parse_min <- function(xbrl_file, parse_labels = FALSE) {
-  
-  # check if xbrl_file exist (url or file)
-  if(grepl("^http", xbrl_file)) {
-    if(!RCurl::url.exists(xbrl_file)) 
-      stop("Url ", xbrl_file, " does not exist.")
-  } else {
-    if(!file.exists(xbrl_file)) 
-      stop("File ", xbrl_file, " does not exist.")
-  }
-  
-  old_opt <- options(stringsAsFactors = FALSE)
-  xbrl_vars <- list()
-
-  # process instance: contexts and facts
-  doc <- XBRL::xbrlParse(xbrl_file)
-  xbrl_vars[["context"]] <- XBRL::xbrlProcessContexts(doc)
-  xbrl_vars[["fact"]] <- XBRL::xbrlProcessFacts(doc)
-  xbrl_file_xsd <- paste0(dirname(xbrl_file), "/", XBRL::xbrlGetSchemaName(doc))
-  XBRL::xbrlFree(doc)
-  
-  # process schema file (roles)
-  docS <- XBRL::xbrlParse(xbrl_file_xsd)
-  xbrl_vars[["role"]] <- XBRL::xbrlProcessRoles(docS)
-  xbrl_vars[["element"]] <- XBRL::xbrlProcessElements(docS)
-  XBRL::xbrlFree(docS)
-
-  # labels
-  if(parse_labels) {
-    xbrl_file_lab <- gsub("\\.xml$", "_lab.xml", xbrl_file)
-    docL <- XBRL::xbrlParse(xbrl_file_lab)
-    xbrl_vars[["label"]] <-XBRL::xbrlProcessLabels(docL)
-    XBRL::xbrlFree(docL)
-  }
-
-  # process calculation link base
-  xbrl_file_cal <- gsub("\\.xml$", "_cal.xml", xbrl_file)
-  docC <- XBRL::xbrlParse(xbrl_file_cal)
-  xbrl_vars[["calculation"]] <- XBRL::xbrlProcessArcs(docC, arcType = "calculation")
-  XBRL::xbrlFree(docC)
-  class(xbrl_vars) <- c("xbrl_vars", "list")
-  attr(xbrl_vars, "source") <- basename(xbrl_file)
-
-  options(stringsAsFactors = unname(unlist(old_opt)))
-
-  invisible(xbrl_vars)
-}
-
-
 
 #' Get a vector of statement IDs
 #' @param xbrl_vars XBRL data
@@ -479,18 +414,27 @@ merge.statement <- function(x, y, ...) {
   el_y <- get_elements(y)
   el_z <- merge(el_x, el_y)
   
-  # merge facts and contexts
-  z <- merge.data.frame(x, y, all = TRUE, ...)
-  # replace NAs in values by zeros
-  z[,5:ncol(z)][is.na(z[,5:ncol(z)])] <- 0
-  # remove duplicated rows (based on periods)
-  z <- z[!duplicated(z[c("endDate")], fromLast = TRUE), ]
-  # order rows by endDate
-  z <- z[order(z$endDate), ]
-  # order columns based on original taxonomy
-  z <- z[,c(names(z)[1:4], el_z[["elementId"]])]
-  #if(!any(duplicated(z$contextId)))
-  row.names(z) <- z$contextId
+  if(!any(names(x)[-(1:4)] %in% names(y)[-(1:4)])  ) {
+    #if same period and different statments
+    col_pos <- which(names(y) %in% c("contextId", "startDate", "decimals"))
+    z <- 
+      x %>%
+      dplyr::left_join(y[,-col_pos], by = "endDate")
+    
+  } else {
+    # if same statement type and different periods
+    
+    z <- merge.data.frame(x, y, all = TRUE, ...)
+    # replace NAs in values by zeros
+    z[,5:ncol(z)][is.na(z[,5:ncol(z)])] <- 0
+    # remove duplicated rows (based on periods)
+    z <- z[!duplicated(z[c("endDate")], fromLast = TRUE), ]
+    # order rows by endDate
+    z <- z[order(z$endDate), ]
+    # order columns based on original taxonomy
+    z <- z[,c(names(z)[1:4], el_z[["elementId"]])]
+  }
+  
   # add attributes
   class(z) <- class(x)
   attr(z, "elements") <- el_z
@@ -521,25 +465,6 @@ merge.statements <- function(x, y, ...) {
     })
   names(z) <- names(y)
   class(z) <- "statements"
-  return(z)
-}
-
-#' Join two statements
-#' @description Use join for different statements in the same period.
-#' Use merge for merging two periods of the same type of statement
-#' @param x a statement object
-#' @param y a statement object
-#' @seealso \link{merge.statement} for merging two statements
-#' @return a statement object
-#' @export
-join <- function(x, y) {
-  
-  col_pos <- which(names(y) %in% c("contextId", "startDate", "decimals"))
-  z <- 
-    x %>%
-    dplyr::left_join(y[,-col_pos], by = "endDate")
-  attr(z, "elements") <- get_elements_h(merge(get_elements(x), get_elements(y)))
-  class(z) <- c("statement", "data.frame")
   return(z)
 }
 

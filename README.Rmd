@@ -14,7 +14,6 @@ knitr::opts_chunk$set(
 ```
 
 
-
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
 library(tidyr)
@@ -40,6 +39,12 @@ statement analysis. With existing packages like XBRL for XBRL parsing,
 dplyr for data manipulation and knitr for reproducible research, this 
 shouldn't be a long journey.
 
+## Install finstr
+finstr is not on CRAN. You have to install it from github. 
+```{r, eval=FALSE}
+library(devtools)
+install_github("bergant/finstr")
+```
 
 ## Get data
 Use XBRL package to parse XBRL files. For example:
@@ -144,7 +149,7 @@ less verbose language. Lets calculate now two ratios:
 ```{r calculate}
 library(dplyr)
 
-balance_sheet %>% calculate(
+balance_sheet %>% calculate( digits = 2,
   
     Current_Ratio = AssetsCurrent / LiabilitiesCurrent,
     
@@ -167,13 +172,14 @@ We will use the formula for yearly preiods:
 $$ DSO = \frac{Average Accounts Receivable}{Sales Revenue} \times 365 $$
 
 In this case we need to connect two type of statements: balance sheets and
-income statements. 
+income statements. With matching reporting periods it can be accomplished 
+with joining two data frames:
 
 ```{r DaysSalesOutstanding}
 
-balance_sheet %>%
-  join( st_all$StatementOfIncome ) %>%
-  calculate(
+balance_sheet %>% 
+  merge(st_all$StatementOfIncome) %>% 
+  calculate( digits = 2,
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
     DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
@@ -181,37 +187,16 @@ balance_sheet %>%
 
 ```
 
-Function `join` is used to join two different statements in the same period.
-We used merge for merging two statements of the same type and different period.
+The leading dot instructs the calculate function to hide the value. In our case
+only DaysSalesOutstanding is selected in final result. There is also a digits parameter to control rounding.
 
-The leading dot instructs the calculate function to hide the values. In our case
-only DaysSalesOutstanding is selected in final result.
-
-Use digits parameter to control rounding:
-
-```{r income}
-
-
-st_all$StatementOfIncome %>% calculate( digits = 2,
-
-  Gross_Margin = 
-    (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
-
-  Operating_Margin =
-    OperatingIncomeLoss / SalesRevenueNet,
-
-  Net_Margin = 
-    NetIncomeLoss / SalesRevenueNet
-
-  ) 
-
-```
+## Calculation as an object
 
 When running same calculation for different statements, store the
 calculation with `calculation` and run with `do_calculation`:
 ```{r calculation}
 # define calculation
-profit_margins <- calculation(
+profit_margins <- calculation( digits = 2,
   
   Gross_Margin = 
     (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
@@ -220,9 +205,8 @@ profit_margins <- calculation(
     OperatingIncomeLoss / SalesRevenueNet,
   
   Net_Margin = 
-    NetIncomeLoss / SalesRevenueNet,
-  
-  digits = 3
+    NetIncomeLoss / SalesRevenueNet
+
 )
 
 # run profit margins for two different statements

@@ -9,6 +9,16 @@ The purpose of finstr package is to use financial statements data in more struct
 
 The idea in long term is to create an environment for reproducible financial statement analysis. With existing packages like XBRL for XBRL parsing, dplyr for data manipulation and knitr for reproducible research, this shouldn't be a long journey.
 
+Install finstr
+--------------
+
+finstr is not on CRAN. You have to install it from github.
+
+``` {.r}
+library(devtools)
+install_github("bergant/finstr")
+```
+
 Get data
 --------
 
@@ -169,7 +179,7 @@ By using `calculate` function we can achieve the same result with less verbose l
 ``` {.r}
 library(dplyr)
 
-balance_sheet %>% calculate(
+balance_sheet %>% calculate( digits = 2,
   
     Current_Ratio = AssetsCurrent / LiabilitiesCurrent,
     
@@ -181,9 +191,9 @@ balance_sheet %>% calculate(
     
 )
 #>         date Current_Ratio Quick_Ratio
-#> 1 2012-09-29      1.495849    1.039360
-#> 2 2013-09-28      1.678639    1.228824
-#> 3 2014-09-27      1.080113    0.670423
+#> 1 2012-09-29          1.50        1.04
+#> 2 2013-09-28          1.68        1.23
+#> 3 2014-09-27          1.08        0.67
 ```
 
 If we need a period average value we can use a `lag` function. For example, to calculate *DSO* (days sales outstanding) over longer periods the average of account receivable is compared to net sales.
@@ -192,56 +202,33 @@ We will use the formula for yearly preiods:
 
 \[ DSO = \frac{Average Accounts Receivable}{Sales Revenue} \times 365 \]
 
-In this case we need to connect two type of statements: balance sheets and income statements.
+In this case we need to connect two type of statements: balance sheets and income statements. With matching reporting periods it can be accomplished with joining two data frames:
 
 ``` {.r}
 
-balance_sheet %>%
-  join( st_all$StatementOfIncome ) %>%
-  calculate(
+balance_sheet %>% 
+  merge(st_all$StatementOfIncome) %>% 
+  calculate( digits = 2,
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
     DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
   )
 #>         date DaysSalesOutstanding
 #> 1 2012-09-29                   NA
-#> 2 2013-09-28             25.66169
-#> 3 2014-09-27             30.51268
+#> 2 2013-09-28                25.66
+#> 3 2014-09-27                30.51
 ```
 
-Function `join` is used to join two different statements in the same period. We used merge for merging two statements of the same type and different period.
+The leading dot instructs the calculate function to hide the value. In our case only DaysSalesOutstanding is selected in final result. There is also a digits parameter to control rounding.
 
-The leading dot instructs the calculate function to hide the values. In our case only DaysSalesOutstanding is selected in final result.
-
-Use digits parameter to control rounding:
-
-``` {.r}
-
-
-st_all$StatementOfIncome %>% calculate( digits = 2,
-
-  Gross_Margin = 
-    (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
-
-  Operating_Margin =
-    OperatingIncomeLoss / SalesRevenueNet,
-
-  Net_Margin = 
-    NetIncomeLoss / SalesRevenueNet
-
-  ) 
-#>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2011-09-24         0.40             0.31       0.24
-#> 2 2012-09-29         0.44             0.35       0.27
-#> 3 2013-09-28         0.38             0.29       0.22
-#> 4 2014-09-27         0.39             0.29       0.22
-```
+Calculation as an object
+------------------------
 
 When running same calculation for different statements, store the calculation with `calculation` and run with `do_calculation`:
 
 ``` {.r}
 # define calculation
-profit_margins <- calculation(
+profit_margins <- calculation( digits = 2,
   
   Gross_Margin = 
     (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
@@ -250,22 +237,21 @@ profit_margins <- calculation(
     OperatingIncomeLoss / SalesRevenueNet,
   
   Net_Margin = 
-    NetIncomeLoss / SalesRevenueNet,
-  
-  digits = 3
+    NetIncomeLoss / SalesRevenueNet
+
 )
 
 # run profit margins for two different statements
 income2013 %>% do_calculation(profit_margins)
 #>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2011-09-24        0.405            0.312      0.239
-#> 2 2012-09-29        0.439            0.353      0.267
-#> 3 2013-09-28        0.376            0.287      0.217
+#> 1 2011-09-24         0.40             0.31       0.24
+#> 2 2012-09-29         0.44             0.35       0.27
+#> 3 2013-09-28         0.38             0.29       0.22
 income2014 %>% do_calculation(profit_margins)
 #>         date Gross_Margin Operating_Margin Net_Margin
-#> 1 2012-09-29        0.439            0.353      0.267
-#> 2 2013-09-28        0.376            0.287      0.217
-#> 3 2014-09-27        0.386            0.287      0.216
+#> 1 2012-09-29         0.44             0.35       0.27
+#> 2 2013-09-28         0.38             0.29       0.22
+#> 3 2014-09-27         0.39             0.29       0.22
 ```
 
 Lagged difference
