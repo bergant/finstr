@@ -18,7 +18,5 @@ test_that("Merge", {
   st2 <- xbrl_get_statements(xbrl_data_aapl2014)
   st_all <- merge(st1, st2)
   expect_true( nrow(st_all[[1]]) > nrow(st1[[1]]), "merge" )
-  nrow(st1[[1]]) 
-  nrow(st2[[1]])
 })  
 

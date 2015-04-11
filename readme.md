@@ -1,13 +1,32 @@
-**Warning: finstr package is in development. Please use with caution.**
+finstr
+======
 
-The purpose of finstr package is to use financial statements data in more structured form and process. For now it is offering:
+The purpose of **finstr** package is to create an environment for reproducible financial statement analysis. The package will not cover specific types of analysis (except in examples and package vignettes) but will provide a domain language to write them. With other functions in basic R and existing R packages users could store, share, reuse and reproduce the results of their analitic work.
 
-1.  Data structure for financial statements in tidy and usable format
-2.  Validation of statement calculation
-3.  Function to merge two reporting periods into single object
-4.  Calculations on statements data and lagged difference calculation
+For now it is offering:
 
-The idea in long term is to create an environment for reproducible financial statement analysis. With existing packages like XBRL for XBRL parsing, dplyr for data manipulation and knitr for reproducible research, this shouldn't be a long journey.
+**1. Data structure for financial statements**
+
+-   Reading from data frames parsed with XBRL package
+-   Structure in tidy format
+-   Encapsulating calculation hierarchy of variables
+-   Default printing in transposed format and with visible hierarchy
+
+**2. Validation of statement calculation**
+
+-   Validation of calcuation hierarchy
+-   Calculation of higher order elements
+
+**3. Merge statements**
+
+-   Merge different periods of equal statement type
+-   Merge statements of a different type
+
+**4. Calculate and reveal**
+
+-   Custom financial ratio calculations definitions
+-   Exposing data by rearranging the calculation hierarchy
+-   Time lagged difference
 
 Install finstr
 --------------
@@ -54,7 +73,9 @@ st2014
 #> StatementOfCashFlowsIndirect           2012-09-29 2014-09-27    3      33
 ```
 
-Statements object is a list of several statement objects (ballance sheets, income and cash flow statements) which are data frames with elements as columns and periods as rows. To get a single *statement* use *statements* object as a regular R list:
+Statements object is a list of several statement objects (ballance sheets, income and cash flow statements).
+
+To get a single *statement* use *statements* object as a regular R list:
 
 ``` {.r}
 balance_sheet2013 <- st2013$StatementOfFinancialPositionClassified
@@ -111,16 +132,6 @@ tail(income2014, 2)
 #> - IncomeTaxExpenseBenefit                           13973      13118
 ```
 
-Information about hierarchical structure of elements (concepts) is stored as an attribute to the statement object.
-
-To get more data about the concepts used in the statement call `get_elements`:
-
-``` {.r}
-bs_els <- get_elements(balance_sheet2014)
-```
-
-Elements store concept descriptions, balance attribute (debit/credit) and parent/child relationships between concepts.
-
 Validate statement calculation hierarchy
 ----------------------------------------
 
@@ -133,38 +144,36 @@ check
 #> Number of elements in errors:  0
 ```
 
-Validation returns all calculation results in a data frame:
+In case of error the numbers with errors will be presented along with elements:
 
 ``` {.r}
-
-df1 <- aggregate(cbind(calculated, error) ~ elementId + date, data = check, sum) 
-split(df1, df1$date)
-#> $`2013-09-28`
-#>                          elementId       date  calculated error
-#> 1                           Assets 2013-09-28 2.07000e+11     0
-#> 2                    AssetsCurrent 2013-09-28 7.32860e+10     0
-#> 3                      Liabilities 2013-09-28 8.34510e+10     0
-#> 4 LiabilitiesAndStockholdersEquity 2013-09-28 2.07000e+11     0
-#> 5               LiabilitiesCurrent 2013-09-28 4.36580e+10     0
-#> 6               StockholdersEquity 2013-09-28 1.23549e+11     0
+check_statement(
+  within(balance_sheet2014, InventoryNet <- InventoryNet * 2)
+)
+#> Number of errors:  2 
+#> Number of elements in errors:  1 
 #> 
-#> $`2014-09-27`
-#>                           elementId       date  calculated error
-#> 7                            Assets 2014-09-27 2.31839e+11     0
-#> 8                     AssetsCurrent 2014-09-27 6.85310e+10     0
-#> 9                       Liabilities 2014-09-27 1.20292e+11     0
-#> 10 LiabilitiesAndStockholdersEquity 2014-09-27 2.31839e+11     0
-#> 11               LiabilitiesCurrent 2014-09-27 6.34480e+10     0
-#> 12               StockholdersEquity 2014-09-27 1.11547e+11     0
+#> Element: AssetsCurrent  =  + CashAndCashEquivalentsAtCarryingValue + AvailableForSaleSecuritiesCurrent + AccountsReceivableNetCurrent + InventoryNet + DeferredTaxAssetsNetCurrent + NontradeReceivablesCurrent + OtherAssetsCurrent 
+#>         date   original calculated      error
+#> 3 2013-09-28 7.3286e+10 7.5050e+10 -1.764e+09
+#> 4 2014-09-27 6.8531e+10 7.0642e+10 -2.111e+09
 ```
 
-... and expressions used to calculate values:
+Validation returns all calculation results in a readable data frame. Lets check only operating income from income statement:
 
 ``` {.r}
-
-check <- check_statement(income2014)
-with( check, expression[elementId == "OperatingIncomeLoss" & date == "2014-09-27"]) 
+check <- check_statement(income2014, element_id = "OperatingIncomeLoss")
+check
+#> Number of errors:  0 
+#> Number of elements in errors:  0
+check$expression[1]
 #> [1] "+ GrossProfit - OperatingExpenses"
+check$original / 10^6
+#> [1] 55241 48999 52503
+check$calculated / 10^6
+#> [1] 55241 48999 52503
+check$error
+#> [1] 0 0 0
 ```
 
 Merge statements from different periods
@@ -176,7 +185,7 @@ Use `merge` function to create single financial statement data from two statemen
 balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
 ```
 
-The structure of merged balance sheets may differ if XBRL taxonomy changed. Function `merge` takes care of it by expanding the elements hierarchy to fit both statements. The values of any missing elements is set to 0.
+The structure of merged balance sheets may differ if XBRL taxonomy changes. Function `merge` takes care of it by expanding the elements hierarchy to fit both statements. The values of any missing elements in different periods is set to 0.
 
 To merge all statements from *statements* object use merge on statements objects:
 
@@ -189,10 +198,22 @@ balance_sheet$endDate
 #> [1] "2012-09-29" "2013-09-28" "2014-09-27"
 ```
 
-Calculate new values and ratios
--------------------------------
+Merge different types of statements
+-----------------------------------
 
-Statement object (in our case `balance_sheet`) is also a data frame object. With elements (or concepts) as columns and time periods as rows. It is possible then to use statement as a data frame.
+If there are no matching elements between the two statements `merge` joins statements by matching their periods. For some financial ratio calculations the combined statement may be
+a better starting point.
+
+``` {.r}
+  merge.statement(
+    st_all$StatementOfFinancialPositionClassified, 
+    st_all$StatementOfIncome )
+```
+
+Calculate financial ratios
+--------------------------
+
+Statement object (in our case `balance_sheet`) is also a data frame object with statement elements as columns and time periods as rows. It is possible then to use statement as a data frame.
 
 Lets calculate current ratio which is defined by
 
@@ -290,6 +311,72 @@ income2014 %>% do_calculation(profit_margins)
 #> 3 2014-09-27         0.39             0.29       0.22
 ```
 
+Rearranging statement hierarchy
+-------------------------------
+
+Calculations gives us freedom to use any formula with any data from financial statements. Most of the time this is not necessary as we can get usefull information just by regrouping calculation hierarchy.
+
+There are many additional reasons why is rearranging statements useful step before actual calculations:
+
+-   We can avoid errors in formulas with many variables
+-   Accounting taxonomies do change and using many formulas on original statement is harder to support than using custom hierarchy for analysis starting point
+-   When sharing analysis it is much easier to print 6 values instead of 30
+
+To rearrange the statement to simple 2-level hierarchy use `expose` function.
+
+``` {.r}
+expose( balance_sheet,
+  
+  # Assets
+  `Current Assets` = "AssetsCurrent",
+  `Noncurrent Assets` = other("Assets"),
+
+  # Liabilites and equity
+  `Current Liabilities` = "LiabilitiesCurrent",
+  `Noncurrent Liabilities` = other(c("Liabilities", "CommitmentsAndContingencies")),
+  `Stockholders Equity` = "StockholdersEquity"
+)
+#> Financial statement: 3 observations from 2012-09-29 to 2014-09-27 
+#> Numbers in  000000 
+#>                                     2014-09-27 2013-09-28 2012-09-29
+#> Assets =                            231839     207000     176064    
+#> + Current.Assets                     68531      73286      57653    
+#> + Noncurrent.Assets                 163308     133714     118411    
+#> LiabilitiesAndStockholdersEquity =  231839     207000     176064    
+#> + Current.Liabilities                63448      43658      38542    
+#> + Noncurrent.Liabilities             56844      39793      19312    
+#> + Stockholders.Equity               111547     123549     118210
+```
+
+Balance sheet stays divided by *Assets* and *Liabilities and Equity*. For the second level we are exposing current assets from noncurrent and similar is done for the liabilities. We choose to separate equity.
+
+Function `expose` expects a list of vectors with element names. Function `other` helps us identify elements without enumerating every single element. Using `other` reduces a lot of potential errors as the function "knows" which elements are not specified and keeps the balance sheet complete.
+
+Sometimes it is easier to define a complement than a list of elements. In this case we can use the `%without%` operator. Let say we want to expose first tangible and then intangible assets:
+
+``` {.r}
+expose( balance_sheet,
+  
+  # Assets
+  `Tangible Assets` = 
+    "Assets" %without% c("Goodwill", "IntangibleAssetsNetExcludingGoodwill"),
+  `Intangible Assets` = other("Assets"),
+
+  # Liabilites and equity
+  `Liabilities` = c("Liabilities", "CommitmentsAndContingencies"),
+  `Stockholders Equity` = "StockholdersEquity"
+)
+#> Financial statement: 3 observations from 2012-09-29 to 2014-09-27 
+#> Numbers in  000000 
+#>                                     2014-09-27 2013-09-28 2012-09-29
+#> Assets =                            231839     207000     176064    
+#> + Tangible.Assets                   223081     201244     170705    
+#> + Intangible.Assets                   8758       5756       5359    
+#> LiabilitiesAndStockholdersEquity =  231839     207000     176064    
+#> + Liabilities                       120292      83451      57854    
+#> + Stockholders.Equity               111547     123549     118210
+```
+
 Lagged difference
 -----------------
 
@@ -297,7 +384,7 @@ To calculate lagged difference for entire statement use `diff` function. The res
 
 ``` {.r}
 
-balance_sheet %>% diff()
+diff(balance_sheet)
 #> Financial statement: 2 observations from 2013-09-28 to 2014-09-27 
 #> Numbers in  000000 
 #>                                                    2014-09-27 2013-09-28
@@ -339,7 +426,7 @@ Balance sheet visualization
 Prepare custom hierarchy
 ------------------------
 
-The only way to visualize a balance sheet is by exposing limited number a few values. The first step is then to aggregate a balance sheet to a small number of pieces. We can use `expose` to specify these groups of elements. For example:
+The only way to visualize a balance sheet is by exposing a limited number of values. The first step is then to aggregate a balance sheet to a small number of pieces. We can use `expose` to specify these groups of elements. For example:
 
 ``` {.r}
 bs_simple <- expose( balance_sheet,
@@ -354,30 +441,10 @@ bs_simple <- expose( balance_sheet,
 )
 ```
 
-Balance sheet stays divided by **Assets** and **Liabilities and Equity**. We only defined simplified hierarchy for the second level.
+Double stacked graph
+--------------------
 
-Function `expose` expects a list of vectors with element names. Function `other` helps us identify elements without enumerating every single element.
-
-The result of `expose` is a valid statement object:
-
-``` {.r}
-# print simplified balance sheet
-bs_simple
-#> Financial statement: 3 observations from 2012-09-29 to 2014-09-27 
-#> Numbers in  000000 
-#>                                     2014-09-27 2013-09-28 2012-09-29
-#> Assets =                            231839     207000     176064    
-#> + Current.Assets                     68531      73286      57653    
-#> + Noncurrent.Assets                 163308     133714     118411    
-#> LiabilitiesAndStockholdersEquity =  231839     207000     176064    
-#> + Current.Liabilities                63448      43658      38542    
-#> + Noncurrent.Liabilities             56844      39793      19312    
-#> + Stockholders.Equity               111547     123549     118210
-# check if valid
-check_statement(bs_simple)
-#> Number of errors:  0 
-#> Number of elements in errors:  0
-```
+Using ggplot2 package we can plot a simplified balance sheet:
 
 ``` {.r}
 library(ggplot2)
@@ -385,7 +452,7 @@ library(ggplot2)
 plot_double_stacked_bar(bs_simple)
 ```
 
-![](img/README-graph1-1.png)
+![](img/README-graph_byside-1.png)
 
 Another option is to group by faceting balance sheet side instead of date:
 
@@ -394,4 +461,14 @@ Another option is to group by faceting balance sheet side instead of date:
 plot_double_stacked_bar(bs_simple, by_date = FALSE)
 ```
 
-![](img/README-graph2-1.png)
+![](img/README-graph_bydate-1.png)
+
+Using **proportional** form we reveal the changes in balance sheet structure:
+
+``` {.r}
+
+bs_simple_prop <- proportional(bs_simple)
+plot_double_stacked_bar(bs_simple_prop)
+```
+
+![](img/README-graph_prop-1.png)

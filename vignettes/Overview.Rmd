@@ -9,6 +9,48 @@ vignette: >
   \usepackage[utf8]{inputenc}
 ---
 
+The purpose of **finstr** package is to create an environment for 
+reproducible financial statement analysis. 
+The package will not cover specific types of 
+analysis (except in examples and package vignettes) but will provide
+a domain language to write them. 
+With other functions in basic R and existing R packages users 
+could store, share, reuse and reproduce the results of their analitic work.
+
+For now it is offering:
+
+**1. Data structure for financial statements**
+
+  - Reading from data frames parsed with XBRL package
+  - Structure in tidy format
+  - Encapsulating calculation hierarchy of variables
+  - Default printing in transposed format and with visible hierarchy
+
+**2. Validation of statement calculation**
+
+  - Validation of calcuation hierarchy
+  - Calculation of higher order elements
+  
+**3. Merge statements** 
+
+  - Merge different periods of equal statement type
+  - Merge statements of a different type 
+  
+**4. Calculate and reveal**
+
+  - Custom financial ratio calculations definitions 
+  - Exposing data by rearranging the calculation hierarchy
+  - Time lagged difference
+
+
+
+## Install finstr
+To install finstr from github use install_github from devtools package: 
+```{r, eval=FALSE}
+library(devtools)
+install_github("bergant/finstr")
+```
+
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
 library(tidyr)
@@ -17,29 +59,6 @@ data(xbrl_data_aapl2013)
 data(xbrl_data_aapl2014)
 ```
 
-**Warning: finstr package is in development. 
-Please use with caution.**
-
-The purpose of finstr package is to use financial statements 
-data in more structured form and process.
-For now it is offering:
-
-1. Data structure for financial statements in tidy and usable format
-2. Validation of statement calculation
-3. Function to merge two reporting periods into single object
-4. Calculations on statements data and lagged difference calculation
-
-The idea in long term is to create an environment for reproducible financial 
-statement analysis. With existing packages like XBRL for XBRL parsing, 
-dplyr for data manipulation and knitr for reproducible research, this 
-shouldn't be a long journey.
-
-## Install finstr
-finstr is not on CRAN. You have to install it from github. 
-```{r, eval=FALSE}
-library(devtools)
-install_github("bergant/finstr")
-```
 
 ## Get data
 Use XBRL package to parse XBRL files. For example:
@@ -66,8 +85,8 @@ st2014
 
 Statements object is a list of 
 several statement objects (ballance sheets, income and cash 
-flow statements) which are data frames with elements as columns and periods
-as rows. 
+flow statements).
+
 To get a single *statement* use *statements* object as a regular R list:
 ```{r statement}
 balance_sheet2013 <- st2013$StatementOfFinancialPositionClassified
@@ -79,23 +98,33 @@ tail(income2014, 2)
 ```
 
 
-Information about hierarchical structure of elements (concepts) is stored 
-as an attribute to the statement object.
-
-To get more data about the concepts used in the statement call `get_elements`: 
-```{r relations}
-bs_els <- get_elements(balance_sheet2014)
-```
-
-Elements store concept descriptions, balance attribute (debit/credit) and 
-parent/child relationships between concepts.
-
 ## Validate statement calculation hierarchy
 Recalculate higher order concepts from basic values and check for errors.
 
 ```{r check}
-errors <- check_statement(balance_sheet2014)
-errors
+check <- check_statement(balance_sheet2014)
+check
+```
+
+In case of error the numbers with errors will be presented along with elements:
+```{r check_error}
+check_statement(
+  within(balance_sheet2014, InventoryNet <- InventoryNet * 2)
+)
+  
+```
+
+
+Validation returns all calculation results in a readable data frame.
+Lets check only operating income from income statement:
+
+```{r check_results check}
+check <- check_statement(income2014, element_id = "OperatingIncomeLoss")
+check
+check$expression[1]
+check$original / 10^6
+check$calculated / 10^6
+check$error
 ```
 
 
@@ -107,22 +136,36 @@ balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
 ```
 
 The structure of merged balance sheets may differ if XBRL
-taxonomy changed. 
+taxonomy changes. 
 Function `merge` takes care of it by expanding the elements 
 hierarchy to fit both statements. 
-The values of any missing elements is set to 0.
+The values of any missing elements in different periods is set to 0.
 
 To merge all statements from *statements* object use merge on statements objects:
 ```{r merge_statements}
 # merge all statements
 st_all <- merge( st2013, st2014 )
-# check if blance sheets are merged:
+# check if balance sheets are merged:
 balance_sheet <- st_all$StatementOfFinancialPositionClassified
+balance_sheet$endDate
 ```
 
-## Calculate new values and ratios
-Statement object (in our case `balance_sheet`) is also a data frame object.
-With elements (or concepts) as columns and time periods as rows.
+## Merge different types of statements
+If there are no matching elements between the two statements 
+`merge` joins statements by matching their periods.
+For some financial ratio calculations the combined statement may be  
+a better starting point.
+
+```{r merge_types, eval=FALSE}
+  merge.statement(
+    st_all$StatementOfFinancialPositionClassified, 
+    st_all$StatementOfIncome )
+```
+
+
+## Calculate financial ratios
+Statement object (in our case `balance_sheet`) is also a data frame object
+with statement elements as columns and time periods as rows.
 It is possible then to use statement as a data frame.
 
 Lets calculate current ratio which is defined by
@@ -173,7 +216,7 @@ with joining two data frames:
 ```{r DaysSalesOutstanding}
 
 balance_sheet %>%
-  inner_join( st_all$StatementOfIncome, by = "endDate") %>%
+  merge( st_all$StatementOfIncome ) %>%
   calculate( digits = 2,
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
@@ -183,33 +226,14 @@ balance_sheet %>%
 ```
 
 The leading dot instructs the calculate function to hide the value. In our case
-only DaysSalesOutstanding is selected in final result.
+only DaysSalesOutstanding is selected in final result. Use `digits` parameter to control rounding.
 
-Use digits parameter to control rounding:
-
-```{r income}
-
-
-st_all$StatementOfIncome %>% calculate( digits = 2,
-
-  Gross_Margin = 
-    (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
-
-  Operating_Margin =
-    OperatingIncomeLoss / SalesRevenueNet,
-
-  Net_Margin = 
-    NetIncomeLoss / SalesRevenueNet
-
-  ) 
-
-```
-
-When running same calculation for different statements, store the
+## Reusing calculations
+When running same calculation for different statements, define the
 calculation with `calculation` and run with `do_calculation`:
 ```{r calculation}
 # define calculation
-profit_margins <- calculation(
+profit_margins <- calculation( digits = 2,
   
   Gross_Margin = 
     (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
@@ -218,18 +242,75 @@ profit_margins <- calculation(
     OperatingIncomeLoss / SalesRevenueNet,
   
   Net_Margin = 
-    NetIncomeLoss / SalesRevenueNet,
+    NetIncomeLoss / SalesRevenueNet
   
-  digits = 2
 )
 
 # run profit margins for two different statements
 income2013 %>% do_calculation(profit_margins)
 income2014 %>% do_calculation(profit_margins)
 
+```
+
+## Rearranging statement hierarchy
+Calculations gives us freedom to use any formula with any data from 
+financial statements.
+Most of the time this is not necessary as we can get usefull information just by
+regrouping calculation hierarchy.
+
+There are many additional reasons why is rearranging statements useful step before
+actual calculations:
+
+   * We can avoid errors in formulas with many variables
+   * Accounting taxonomies do change and using many formulas on original statement is
+   harder to support than using custom hierarchy for analysis starting point
+   * When sharing analysis it is much easier to print 6 values instead of 30
+      
+To rearrange the statement to simple 2-level hierarchy use `expose` function.
+
+```{r expose}
+expose( balance_sheet,
+  
+  # Assets
+  `Current Assets` = "AssetsCurrent",
+  `Noncurrent Assets` = other("Assets"),
+
+  # Liabilites and equity
+  `Current Liabilities` = "LiabilitiesCurrent",
+  `Noncurrent Liabilities` = other(c("Liabilities", "CommitmentsAndContingencies")),
+  `Stockholders Equity` = "StockholdersEquity"
+)
 
 ```
 
+Balance sheet stays divided by *Assets* and *Liabilities and Equity*.
+For the second level we are exposing *current assets* from *noncurrent* and 
+similar is done for the *liabilities*. We choose to separate *equity*.
+
+Function `expose` expects a list of vectors with element names.
+Function `other` helps us identify elements without enumerating every single element.
+Using `other` reduces a lot of potential errors as the function "knows" which
+elements are not specified and keeps the balance sheet complete.
+
+
+Sometimes it is easier to define a complement than a list of elements.
+In this case we can use the `%without%` operator. Let say we
+want to expose first tangible and then intangible assets:
+
+```{r expose_without}
+expose( balance_sheet,
+  
+  # Assets
+  `Tangible Assets` = 
+    "Assets" %without% c("Goodwill", "IntangibleAssetsNetExcludingGoodwill"),
+  `Intangible Assets` = other("Assets"),
+
+  # Liabilites and equity
+  `Liabilities` = c("Liabilities", "CommitmentsAndContingencies"),
+  `Stockholders Equity` = "StockholdersEquity"
+)
+
+```
 
 ##Lagged difference
 To calculate lagged difference for entire statement use `diff` function.
@@ -237,6 +318,7 @@ The result is statement of changes between successive years:
 
 ```{r diff}
 
-balance_sheet %>% diff()
+diff(balance_sheet)
 
 ```
+

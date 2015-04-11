@@ -48,11 +48,11 @@ tail(balance_sheet,2)
 ```
 
 ## Prepare custom hierarchy
-The only way to visualize a balance sheet is by exposing limited number a few values. 
+The only way to visualize a balance sheet is by exposing a limited number of values. 
 The first step is then to aggregate a balance sheet to a small number of pieces.
 We can use `expose` to specify these groups of elements. For example:
 
-```{r expose}
+```{r expose_graph}
 bs_simple <- expose( balance_sheet,
   
   # Assets
@@ -66,24 +66,10 @@ bs_simple <- expose( balance_sheet,
 
 ```
 
-Balance sheet stays divided by **Assets** and **Liabilities and Equity**.
-We only defined simplified hierarchy for the second level.
+## Double stacked graph
+Using ggplot2 package we can plot a simplified balance sheet:
 
-Function `expose` expects a list of vectors with element names.
-Function `other` helps us identify elements without enumerating every single element.
-
-The result of `expose` is a valid statement object:
-```{r simple_bs}
-# print simplified balance sheet
-bs_simple
-# check if valid
-check_statement(bs_simple)
-
-```
-
-
-
-```{r graph1, fig.width=7.2}
+```{r graph_byside, fig.width=7.0}
 library(ggplot2)
 
 plot_double_stacked_bar(bs_simple)
@@ -92,9 +78,18 @@ plot_double_stacked_bar(bs_simple)
 
 Another option is to group by faceting balance sheet side instead of date:
 
-```{r graph2, fig.width=7.2}
+```{r graph_bydate, fig.width=7.0}
 
 plot_double_stacked_bar(bs_simple, by_date = FALSE)
+
+```
+
+Using **proportional** form we reveal the changes in balance sheet structure:
+
+```{r graph_prop, fig.width=7.0}
+
+bs_simple_prop <- proportional(bs_simple)
+plot_double_stacked_bar(bs_simple_prop)
 
 ```
 

@@ -663,11 +663,35 @@ diff.statement <- function(x, lag = 1L, ...) {
 #'@export
 #'@keywords internal
 `%without%` <- function (a, b) {
+  # declare x and y just to let the check now there is no problem...
+  # x will be a statement object when the expression evaluates
+  # y will be all used elements
+  x <- NULL
+  y <- NULL
+
   lazyeval::lazy(
     setdiff( setdiff( get_descendants(x, a), get_descendants(x, b)), y)
   )
 }
 
+#' Proportional values
+#' 
+#' Every value in the financial statement is divided by topmost parent's value
+#' @param x a statement object
+#' @param digits if specified number of digits to round the result
+#' @export
+proportional <- function(x, digits = NULL) {
+  y <- x
+  for(col_name in get_elements(x)[["elementId"]]) {
+    parent_id <- get_ascendant(x, col_name)[[1]]
+    x[[col_name]] <- y[[col_name]] / y[[parent_id]]
+    if(!missing(digits)) {
+      x[[col_name]] <- round(x[[col_name]], digits )
+    }
+  }
+  x[["decimals"]] <- 0
+  return(x)
+}
 
 #'Other elements
 #'@param ... element IDs from element hierarchy
@@ -676,7 +700,12 @@ diff.statement <- function(x, lag = 1L, ...) {
 #'@export
 #'@keywords internal
 other <- function (...) {
-  # lazy_eval(other("Assets"), data = list(x = x, y = get_descendants(x, "AssetsCurrent")))
+  # declare x and y just to let the check now there is no problem...
+  # x will be a statement object when the expression evaluates
+  # y will be all used elements
+  x <- NULL
+  y <- NULL
+  
   lazyeval::lazy(
     setdiff(get_descendants(x, c(...) ), y)
   ) 
