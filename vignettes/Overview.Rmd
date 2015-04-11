@@ -22,7 +22,7 @@ For now it is offering:
 **1. Data structure for financial statements**
 
   - Reading from data frames parsed with XBRL package
-  - Structure in tidy format
+  - Statements in tidy format with accounting taxonomy concepts as columns
   - Encapsulating calculation hierarchy of variables
   - Default printing in transposed format and with visible hierarchy
 
@@ -255,7 +255,7 @@ income2014 %>% do_calculation(profit_margins)
 ## Rearranging statement hierarchy
 Calculations gives us freedom to use any formula with any data from 
 financial statements.
-Most of the time this is not necessary as we can get usefull information just by
+Most of the time this is not necessary as we can get useful information just by
 regrouping calculation hierarchy.
 
 There are many additional reasons why is rearranging statements useful step before
@@ -294,8 +294,8 @@ elements are not specified and keeps the balance sheet complete.
 
 
 Sometimes it is easier to define a complement than a list of elements.
-In this case we can use the `%without%` operator. Let say we
-want to expose first tangible and then intangible assets:
+In this case we can use the `%without%` operator. Lets expose for example
+*tangible* and then *intangible* assets:
 
 ```{r expose_without}
 expose( balance_sheet,

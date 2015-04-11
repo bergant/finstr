@@ -8,7 +8,7 @@ For now it is offering:
 **1. Data structure for financial statements**
 
 -   Reading from data frames parsed with XBRL package
--   Structure in tidy format
+-   Statements in tidy format with accounting taxonomy concepts as columns
 -   Encapsulating calculation hierarchy of variables
 -   Default printing in transposed format and with visible hierarchy
 
@@ -314,7 +314,7 @@ income2014 %>% do_calculation(profit_margins)
 Rearranging statement hierarchy
 -------------------------------
 
-Calculations gives us freedom to use any formula with any data from financial statements. Most of the time this is not necessary as we can get usefull information just by regrouping calculation hierarchy.
+Calculations gives us freedom to use any formula with any data from financial statements. Most of the time this is not necessary as we can get useful information just by regrouping calculation hierarchy.
 
 There are many additional reasons why is rearranging statements useful step before actual calculations:
 
@@ -348,11 +348,11 @@ expose( balance_sheet,
 #> + Stockholders.Equity               111547     123549     118210
 ```
 
-Balance sheet stays divided by *Assets* and *Liabilities and Equity*. For the second level we are exposing current assets from noncurrent and similar is done for the liabilities. We choose to separate equity.
+Balance sheet stays divided by *Assets* and *Liabilities and Equity*. For the second level we are exposing *current assets* from *noncurrent* and similar is done for the *liabilities*. We choose to separate *equity*.
 
 Function `expose` expects a list of vectors with element names. Function `other` helps us identify elements without enumerating every single element. Using `other` reduces a lot of potential errors as the function "knows" which elements are not specified and keeps the balance sheet complete.
 
-Sometimes it is easier to define a complement than a list of elements. In this case we can use the `%without%` operator. Let say we want to expose first tangible and then intangible assets:
+Sometimes it is easier to define a complement than a list of elements. In this case we can use the `%without%` operator. Lets expose for example *tangible* and then *intangible* assets:
 
 ``` {.r}
 expose( balance_sheet,
