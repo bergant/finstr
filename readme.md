@@ -168,12 +168,8 @@ check
 #> Number of elements in errors:  0
 check$expression[1]
 #> [1] "+ GrossProfit - OperatingExpenses"
-check$original / 10^6
-#> [1] 55241 48999 52503
 check$calculated / 10^6
 #> [1] 55241 48999 52503
-check$error
-#> [1] 0 0 0
 ```
 
 Merge statements from different periods
@@ -219,22 +215,24 @@ Lets calculate current ratio which is defined by
 
 \[ Current Ratio = \frac{Current Assets}{Current Liabilities} \]
 
+With dplyr package we can use `mutate`, `select` or `transmute` functions:
+
 ``` {.r}
 library(dplyr)
 
-balance_sheet %>%
-  mutate(CurrentRatio = AssetsCurrent / LiabilitiesCurrent) %>%
-  select(endDate, CurrentRatio)
-#>      endDate CurrentRatio
+balance_sheet %>% transmute(
+  date = endDate, 
+  CurrentRatio = AssetsCurrent / LiabilitiesCurrent
+)
+#>         date CurrentRatio
 #> 1 2012-09-29     1.495849
 #> 2 2013-09-28     1.678639
 #> 3 2014-09-27     1.080113
 ```
 
-By using `calculate` function we can achieve the same result with less verbose language. Lets calculate now two ratios:
+By using `finstr::calculate` function we can achieve the same result but don't have to handle the date field and there is a rounding parameter. Lets calculate for example two ratios:
 
 ``` {.r}
-library(dplyr)
 
 balance_sheet %>% calculate( digits = 2,
   
@@ -263,11 +261,11 @@ In this case we need to connect two type of statements: balance sheets and incom
 
 ``` {.r}
 
-balance_sheet %>%
-  merge( st_all$StatementOfIncome ) %>%
-  calculate( digits = 2,
+merge(balance_sheet, st_all$StatementOfIncome ) %>% calculate( digits = 2,
+                                                               
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
+    
     DaysSalesOutstanding = .AccountReceivableAvg / SalesRevenueNet * 365 
   )
 #>         date DaysSalesOutstanding
@@ -281,11 +279,11 @@ The leading dot instructs the calculate function to hide the value. In our case 
 Reusing calculations
 --------------------
 
-When running same calculation for different statements, define the calculation with `calculation` and run with `do_calculation`:
+When running same calculation for different statements, define the calculation with `calculation` and call `calculate` with argument `calculations`:
 
 ``` {.r}
 # define calculation
-profit_margins <- calculation( digits = 2,
+profit_margins <- calculation(
   
   Gross_Margin = 
     (SalesRevenueNet -  CostOfGoodsAndServicesSold) / SalesRevenueNet,
@@ -299,12 +297,12 @@ profit_margins <- calculation( digits = 2,
 )
 
 # run profit margins for two different statements
-income2013 %>% do_calculation(profit_margins)
+income2013 %>% calculate(calculations = profit_margins, digits = 2)
 #>         date Gross_Margin Operating_Margin Net_Margin
 #> 1 2011-09-24         0.40             0.31       0.24
 #> 2 2012-09-29         0.44             0.35       0.27
 #> 3 2013-09-28         0.38             0.29       0.22
-income2014 %>% do_calculation(profit_margins)
+income2014 %>% calculate(calculations = profit_margins, digits = 2)
 #>         date Gross_Margin Operating_Margin Net_Margin
 #> 1 2012-09-29         0.44             0.35       0.27
 #> 2 2013-09-28         0.38             0.29       0.22
@@ -448,6 +446,7 @@ Using ggplot2 package we can plot a simplified balance sheet:
 
 ``` {.r}
 library(ggplot2)
+#> Warning: package 'ggplot2' was built under R version 3.1.3
 
 plot_double_stacked_bar(bs_simple)
 ```

@@ -4,12 +4,10 @@
 \alias{calculation}
 \title{Define calculation}
 \usage{
-calculation(..., x = NULL)
+calculation(...)
 }
 \arguments{
 \item{...}{formulas}
-
-\item{x}{not used}
 }
 \description{
 Define calculation
@@ -23,10 +21,10 @@ profit_margins <- calculation(
  Net_Margin = NetIncomeLoss / SalesRevenueNet
 )
 
-income_statement \%>\% do_calculation(profit_margins)
+income_statement \%>\% calculate(calculations = profit_margins)
 }
 }
 \seealso{
-\code{\link{do_calculation}} and  \code{\link{calculate}}
+\code{\link{calculate}}
 }
 
