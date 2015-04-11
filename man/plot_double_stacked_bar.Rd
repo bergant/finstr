@@ -4,17 +4,19 @@
 \alias{plot_double_stacked_bar}
 \title{Plot double stacked bar}
 \usage{
-plot_double_stacked_bar(x, by_date = FALSE, is_diff = FALSE,
-  dif_labels = NULL)
+plot_double_stacked_bar(x, by_date = TRUE, is_diff = FALSE,
+  dif_labels = NULL, ...)
 }
 \arguments{
-\item{x}{a list with two data frames (sides)}
+\item{x}{a statement object with}
 
-\item{by_date}{if TRUE, facets will be grouped by date}
+\item{by_date}{if FALSE facets will be grouped by first element level}
 
 \item{is_diff}{if TRUE data is rearanged to support negative values}
 
 \item{dif_labels}{vector with two new labels in case of diff mode}
+
+\item{...}{other attributes}
 }
 \description{
 Plot double stacked bar

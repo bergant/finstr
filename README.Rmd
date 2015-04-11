@@ -14,6 +14,7 @@ knitr::opts_chunk$set(
 ```
 
 
+
 ```{r, echo=FALSE, results='hide', message=FALSE }
 library(dplyr)
 library(tidyr)
@@ -40,7 +41,7 @@ dplyr for data manipulation and knitr for reproducible research, this
 shouldn't be a long journey.
 
 ## Install finstr
-finstr is not on CRAN. You have to install it from github. 
+To install finstr from github use install_github from devtools package: 
 ```{r, eval=FALSE}
 library(devtools)
 install_github("bergant/finstr")
@@ -99,8 +100,25 @@ parent/child relationships between concepts.
 Recalculate higher order concepts from basic values and check for errors.
 
 ```{r check}
-errors <- check_statement(balance_sheet2014)
-errors
+check <- check_statement(balance_sheet2014)
+check
+```
+
+Validation returns all calculation results in a data frame:
+
+```{r check_results check}
+
+df1 <- aggregate(cbind(calculated, error) ~ elementId + date, data = check, sum) 
+split(df1, df1$date)
+  
+```
+
+... and expressions used to calculate values:
+```{r check_expression check}
+
+check <- check_statement(income2014)
+with( check, expression[elementId == "OperatingIncomeLoss" & date == "2014-09-27"]) 
+
 ```
 
 
@@ -121,8 +139,9 @@ To merge all statements from *statements* object use merge on statements objects
 ```{r merge_statements}
 # merge all statements
 st_all <- merge( st2013, st2014 )
-# check if blance sheets are merged:
+# check if balance sheets are merged:
 balance_sheet <- st_all$StatementOfFinancialPositionClassified
+balance_sheet$endDate
 ```
 
 ## Calculate new values and ratios
@@ -177,8 +196,8 @@ with joining two data frames:
 
 ```{r DaysSalesOutstanding}
 
-balance_sheet %>% 
-  merge(st_all$StatementOfIncome) %>% 
+balance_sheet %>%
+  merge( st_all$StatementOfIncome ) %>%
   calculate( digits = 2,
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
@@ -188,11 +207,10 @@ balance_sheet %>%
 ```
 
 The leading dot instructs the calculate function to hide the value. In our case
-only DaysSalesOutstanding is selected in final result. There is also a digits parameter to control rounding.
+only DaysSalesOutstanding is selected in final result. Use `digits` parameter to control rounding.
 
-## Calculation as an object
-
-When running same calculation for different statements, store the
+## Reusing calculations
+When running same calculation for different statements, define the
 calculation with `calculation` and run with `do_calculation`:
 ```{r calculation}
 # define calculation
@@ -206,13 +224,12 @@ profit_margins <- calculation( digits = 2,
   
   Net_Margin = 
     NetIncomeLoss / SalesRevenueNet
-
+  
 )
 
 # run profit margins for two different statements
 income2013 %>% do_calculation(profit_margins)
 income2014 %>% do_calculation(profit_margins)
-
 
 ```
 
@@ -227,72 +244,55 @@ balance_sheet %>% diff()
 
 ```
 
-
-
 # Balance sheet visualization
 
-## Prepare custom calculation hierarchy
-There is no human readable way to plot every number of the balance sheet in 
-one graph.
-The only way to plot a balance sheet is to plot it several times. 
-Each graph should have a limited number of highlited features.
-The first step is to break a balance sheet to a small number of pieces.
-We can use calculations to specify these groups of elements.
+## Prepare custom hierarchy
+The only way to visualize a balance sheet is by exposing limited number a few values. 
+The first step is then to aggregate a balance sheet to a small number of pieces.
+We can use `expose` to specify these groups of elements. For example:
 
-```{r custom_hierarchy}
-
-two_sided_bs_calculation <- 
-  list(
-    "Assets" = calculation(
-      "Cash and Equivalents" = CashAndCashEquivalentsAtCarryingValue,
-      "Other Current Assets" = AssetsCurrent - CashAndCashEquivalentsAtCarryingValue,
-      "Other Assets" = Assets - AssetsCurrent
-    ),
-    
-    "Liabilities and Equity" = calculation(
-      "Current Liabilities" = LiabilitiesCurrent,
-      "Other Liabilities" =  Liabilities - LiabilitiesCurrent,
-      "Stockholders Equity" = StockholdersEquity
-    )
-  )
+```{r expose}
+bs_simple <- expose( balance_sheet,
+  
+  # Assets
+  `Current Assets` = "AssetsCurrent",
+  `Noncurrent Assets` = other("Assets"),
+  # Liabilites and equity
+  `Current Liabilities` = "LiabilitiesCurrent",
+  `Noncurrent Liabilities` = other(c("Liabilities", "CommitmentsAndContingencies")),
+  `Stockholders Equity` = "StockholdersEquity"
+)
 
 ```
 
-We divided balance sheet to **Assets** and **Liabilities and Equity**. 
-Both main groups are divided to only 3 smaller chunks (based on liquidity). 
+Balance sheet stays divided by **Assets** and **Liabilities and Equity**.
+We only defined simplified hierarchy for the second level.
 
-To plot the result we need to run the calculations on a balance sheet and call
-graph plotting function:
+Function `expose` expects a list of vectors with element names.
+Function `other` helps us identify elements without enumerating every single element.
 
-```{r graph1, fig.width=7.3, fig.height=3.5}
-
-balance_sheet %>% 
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar()
-
-```
-
-Another option is to group by date and see assets close to liabilities for
-every year:
-
-```{r graph2, fig.width=7.3, fig.height=3.5}
-
-balance_sheet %>% 
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar(by_date = TRUE)
+The result of `expose` is a valid statement object:
+```{r simple_bs}
+# print simplified balance sheet
+bs_simple
+# check if valid
+check_statement(bs_simple)
 
 ```
 
-## See the difference
-We can use the same custom hierarchy on lagged differences.
 
-```{r graph3, fig.width=7.3, fig.height=3.5}
 
-balance_sheet %>%
-  diff() %>%
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar(
-    by_date = TRUE, is_diff = TRUE, 
-    dif_labels = c("Money\nconsumption","Money\nsupply"))
+```{r graph1, fig.width=7.2}
+library(ggplot2)
+
+plot_double_stacked_bar(bs_simple)
+
+```
+
+Another option is to group by faceting balance sheet side instead of date:
+
+```{r graph2, fig.width=7.2}
+
+plot_double_stacked_bar(bs_simple, by_date = FALSE)
 
 ```

@@ -18,8 +18,6 @@ data(xbrl_data_aapl2013)
 data(xbrl_data_aapl2014)
 ```
 
-**Warning: finstr package is in development. 
-Please use with caution.**
 
 ## Get data
 Use XBRL package to parse XBRL files. For example:
@@ -49,71 +47,57 @@ tail(balance_sheet,2)
 
 ```
 
-## Prepare custom calculation hierarchy
-There is no human readable way to plot every number of the balance sheet in 
-one graph.
-The only way to plot a balance sheet is to plot it several times. 
-Each graph should have a limited number of highlited features.
-The first step is to break a balance sheet to a small number of pieces.
-We can use calculations to specify these groups of elements.
+## Prepare custom hierarchy
+The only way to visualize a balance sheet is by exposing limited number a few values. 
+The first step is then to aggregate a balance sheet to a small number of pieces.
+We can use `expose` to specify these groups of elements. For example:
 
-```{r custom_hierarchy}
-
-two_sided_bs_calculation <- 
-  list(
-    "Assets" = calculation(
-      "Cash and Equivalents" = CashAndCashEquivalentsAtCarryingValue,
-      "Other Current Assets" = AssetsCurrent - CashAndCashEquivalentsAtCarryingValue,
-      "Other Assets" = Assets - AssetsCurrent
-    ),
-    
-    "Liabilities and Equity" = calculation(
-      "Current Liabilities" = LiabilitiesCurrent,
-      "Other Liabilities" =  Liabilities - LiabilitiesCurrent,
-      "Stockholders Equity" = StockholdersEquity
-    )
-  )
+```{r expose}
+bs_simple <- expose( balance_sheet,
+  
+  # Assets
+  `Current Assets` = "AssetsCurrent",
+  `Noncurrent Assets` = other("Assets"),
+  # Liabilites and equity
+  `Current Liabilities` = "LiabilitiesCurrent",
+  `Noncurrent Liabilities` = other(c("Liabilities", "CommitmentsAndContingencies")),
+  `Stockholders Equity` = "StockholdersEquity"
+)
 
 ```
 
-We divided balance sheet to **Assets** and **Liabilities and Equity**. 
-Both main groups are divided to only 3 smaller chunks (based on liquidity). 
+Balance sheet stays divided by **Assets** and **Liabilities and Equity**.
+We only defined simplified hierarchy for the second level.
 
-To plot the result we need to run the calculations on a balance sheet and call
-graph plotting function:
+Function `expose` expects a list of vectors with element names.
+Function `other` helps us identify elements without enumerating every single element.
 
-```{r graph1, fig.width=7.3}
-
-balance_sheet %>% 
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar()
-
-```
-
-Another option is to group by date and see assets close to liabilities for
-every year:
-
-```{r graph2, fig.width=7.3}
-
-balance_sheet %>% 
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar(by_date = TRUE)
+The result of `expose` is a valid statement object:
+```{r simple_bs}
+# print simplified balance sheet
+bs_simple
+# check if valid
+check_statement(bs_simple)
 
 ```
 
-## See the difference
-We can use the same custom hierarchy on lagged differences.
 
-```{r graph3, fig.width=7.3}
 
-balance_sheet %>%
-  diff() %>%
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar(
-    by_date = TRUE, is_diff = TRUE, 
-    dif_labels = c("Money\nconsumption","Money\nsupply"))
+```{r graph1, fig.width=7.2}
+library(ggplot2)
+
+plot_double_stacked_bar(bs_simple)
 
 ```
+
+Another option is to group by faceting balance sheet side instead of date:
+
+```{r graph2, fig.width=7.2}
+
+plot_double_stacked_bar(bs_simple, by_date = FALSE)
+
+```
+
 
 
 

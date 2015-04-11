@@ -4,10 +4,12 @@
 \alias{print.statement}
 \title{Print a statement object}
 \usage{
-\method{print}{statement}(x, ...)
+\method{print}{statement}(x, descriptions = FALSE, ...)
 }
 \arguments{
 \item{x}{a statement object}
+
+\item{descriptions}{if TRUE labels are printed instead of element IDs}
 
 \item{...}{further arguments passed to or from other methods.}
 }

@@ -17,5 +17,6 @@ Imports:
     lazyeval
 Suggests: testthat,
     knitr,
-    ggplot2
+    ggplot2,
+    scales
 VignetteBuilder: knitr

@@ -12,7 +12,7 @@ The idea in long term is to create an environment for reproducible financial sta
 Install finstr
 --------------
 
-finstr is not on CRAN. You have to install it from github.
+To install finstr from github use install\_github from devtools package:
 
 ``` {.r}
 library(devtools)
@@ -108,7 +108,7 @@ tail(income2014, 2)
 #>       + ResearchAndDevelopmentExpense                6041       4475    
 #>       + SellingGeneralAndAdministrativeExpense      11993      10830    
 #>   + NonoperatingIncomeExpense                         980       1156    
-#> - IncomeTaxExpenseBenefitNA                         13973      13118
+#> - IncomeTaxExpenseBenefit                           13973      13118
 ```
 
 Information about hierarchical structure of elements (concepts) is stored as an attribute to the statement object.
@@ -127,10 +127,44 @@ Validate statement calculation hierarchy
 Recalculate higher order concepts from basic values and check for errors.
 
 ``` {.r}
-errors <- check_statement(balance_sheet2014)
-errors
+check <- check_statement(balance_sheet2014)
+check
 #> Number of errors:  0 
 #> Number of elements in errors:  0
+```
+
+Validation returns all calculation results in a data frame:
+
+``` {.r}
+
+df1 <- aggregate(cbind(calculated, error) ~ elementId + date, data = check, sum) 
+split(df1, df1$date)
+#> $`2013-09-28`
+#>                          elementId       date  calculated error
+#> 1                           Assets 2013-09-28 2.07000e+11     0
+#> 2                    AssetsCurrent 2013-09-28 7.32860e+10     0
+#> 3                      Liabilities 2013-09-28 8.34510e+10     0
+#> 4 LiabilitiesAndStockholdersEquity 2013-09-28 2.07000e+11     0
+#> 5               LiabilitiesCurrent 2013-09-28 4.36580e+10     0
+#> 6               StockholdersEquity 2013-09-28 1.23549e+11     0
+#> 
+#> $`2014-09-27`
+#>                           elementId       date  calculated error
+#> 7                            Assets 2014-09-27 2.31839e+11     0
+#> 8                     AssetsCurrent 2014-09-27 6.85310e+10     0
+#> 9                       Liabilities 2014-09-27 1.20292e+11     0
+#> 10 LiabilitiesAndStockholdersEquity 2014-09-27 2.31839e+11     0
+#> 11               LiabilitiesCurrent 2014-09-27 6.34480e+10     0
+#> 12               StockholdersEquity 2014-09-27 1.11547e+11     0
+```
+
+... and expressions used to calculate values:
+
+``` {.r}
+
+check <- check_statement(income2014)
+with( check, expression[elementId == "OperatingIncomeLoss" & date == "2014-09-27"]) 
+#> [1] "+ GrossProfit - OperatingExpenses"
 ```
 
 Merge statements from different periods
@@ -149,8 +183,10 @@ To merge all statements from *statements* object use merge on statements objects
 ``` {.r}
 # merge all statements
 st_all <- merge( st2013, st2014 )
-# check if blance sheets are merged:
+# check if balance sheets are merged:
 balance_sheet <- st_all$StatementOfFinancialPositionClassified
+balance_sheet$endDate
+#> [1] "2012-09-29" "2013-09-28" "2014-09-27"
 ```
 
 Calculate new values and ratios
@@ -206,8 +242,8 @@ In this case we need to connect two type of statements: balance sheets and incom
 
 ``` {.r}
 
-balance_sheet %>% 
-  merge(st_all$StatementOfIncome) %>% 
+balance_sheet %>%
+  merge( st_all$StatementOfIncome ) %>%
   calculate( digits = 2,
     .AccountReceivableLast = lag(AccountsReceivableNetCurrent),
     .AccountReceivableAvg = (.AccountReceivableLast + AccountsReceivableNetCurrent)/2,
@@ -219,12 +255,12 @@ balance_sheet %>%
 #> 3 2014-09-27                30.51
 ```
 
-The leading dot instructs the calculate function to hide the value. In our case only DaysSalesOutstanding is selected in final result. There is also a digits parameter to control rounding.
+The leading dot instructs the calculate function to hide the value. In our case only DaysSalesOutstanding is selected in final result. Use `digits` parameter to control rounding.
 
-Calculation as an object
-------------------------
+Reusing calculations
+--------------------
 
-When running same calculation for different statements, store the calculation with `calculation` and run with `do_calculation`:
+When running same calculation for different statements, define the calculation with `calculation` and run with `do_calculation`:
 
 ``` {.r}
 # define calculation
@@ -238,7 +274,7 @@ profit_margins <- calculation( digits = 2,
   
   Net_Margin = 
     NetIncomeLoss / SalesRevenueNet
-
+  
 )
 
 # run profit margins for two different statements
@@ -294,72 +330,68 @@ balance_sheet %>% diff()
 #>   + CommonStockValue                                    0     -16422    
 #>   + RetainedEarningsAccumulatedDeficit             -17104       2967    
 #>   + AccumulatedOtherComprehensiveIncomeLossNetOfTa   1553       -970    
-#>   + CommonStocksIncludingAdditionalPaidInCapitalNA   3549      19764
+#>   + CommonStocksIncludingAdditionalPaidInCapital     3549      19764
 ```
 
 Balance sheet visualization
 ===========================
 
-Prepare custom calculation hierarchy
-------------------------------------
+Prepare custom hierarchy
+------------------------
 
-There is no human readable way to plot every number of the balance sheet in one graph. The only way to plot a balance sheet is to plot it several times. Each graph should have a limited number of highlited features. The first step is to break a balance sheet to a small number of pieces. We can use calculations to specify these groups of elements.
+The only way to visualize a balance sheet is by exposing limited number a few values. The first step is then to aggregate a balance sheet to a small number of pieces. We can use `expose` to specify these groups of elements. For example:
 
 ``` {.r}
-
-two_sided_bs_calculation <- 
-  list(
-    "Assets" = calculation(
-      "Cash and Equivalents" = CashAndCashEquivalentsAtCarryingValue,
-      "Other Current Assets" = AssetsCurrent - CashAndCashEquivalentsAtCarryingValue,
-      "Other Assets" = Assets - AssetsCurrent
-    ),
-    
-    "Liabilities and Equity" = calculation(
-      "Current Liabilities" = LiabilitiesCurrent,
-      "Other Liabilities" =  Liabilities - LiabilitiesCurrent,
-      "Stockholders Equity" = StockholdersEquity
-    )
-  )
+bs_simple <- expose( balance_sheet,
+  
+  # Assets
+  `Current Assets` = "AssetsCurrent",
+  `Noncurrent Assets` = other("Assets"),
+  # Liabilites and equity
+  `Current Liabilities` = "LiabilitiesCurrent",
+  `Noncurrent Liabilities` = other(c("Liabilities", "CommitmentsAndContingencies")),
+  `Stockholders Equity` = "StockholdersEquity"
+)
 ```
 
-We divided balance sheet to **Assets** and **Liabilities and Equity**. Both main groups are divided to only 3 smaller chunks (based on liquidity).
+Balance sheet stays divided by **Assets** and **Liabilities and Equity**. We only defined simplified hierarchy for the second level.
 
-To plot the result we need to run the calculations on a balance sheet and call graph plotting function:
+Function `expose` expects a list of vectors with element names. Function `other` helps us identify elements without enumerating every single element.
+
+The result of `expose` is a valid statement object:
 
 ``` {.r}
+# print simplified balance sheet
+bs_simple
+#> Financial statement: 3 observations from 2012-09-29 to 2014-09-27 
+#> Numbers in  000000 
+#>                                     2014-09-27 2013-09-28 2012-09-29
+#> Assets =                            231839     207000     176064    
+#> + Current.Assets                     68531      73286      57653    
+#> + Noncurrent.Assets                 163308     133714     118411    
+#> LiabilitiesAndStockholdersEquity =  231839     207000     176064    
+#> + Current.Liabilities                63448      43658      38542    
+#> + Noncurrent.Liabilities             56844      39793      19312    
+#> + Stockholders.Equity               111547     123549     118210
+# check if valid
+check_statement(bs_simple)
+#> Number of errors:  0 
+#> Number of elements in errors:  0
+```
 
-balance_sheet %>% 
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar()
+``` {.r}
+library(ggplot2)
+
+plot_double_stacked_bar(bs_simple)
 ```
 
 ![](img/README-graph1-1.png)
 
-Another option is to group by date and see assets close to liabilities for every year:
+Another option is to group by faceting balance sheet side instead of date:
 
 ``` {.r}
 
-balance_sheet %>% 
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar(by_date = TRUE)
+plot_double_stacked_bar(bs_simple, by_date = FALSE)
 ```
 
 ![](img/README-graph2-1.png)
-
-See the difference
-------------------
-
-We can use the same custom hierarchy on lagged differences.
-
-``` {.r}
-
-balance_sheet %>%
-  diff() %>%
-  do_calculation(two_sided_bs_calculation) %>%
-  plot_double_stacked_bar(
-    by_date = TRUE, is_diff = TRUE, 
-    dif_labels = c("Money\nconsumption","Money\nsupply"))
-```
-
-![](img/README-graph3-1.png)

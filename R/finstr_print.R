@@ -24,9 +24,10 @@ print.statements <- function(x, ...) {
 #' Print a statement object
 #' 
 #' @param x a statement object
+#' @param descriptions if TRUE labels are printed instead of element IDs
 #' @param ... further arguments passed to or from other methods.
 #' @export
-print.statement <- function(x, ...) {
+print.statement <- function(x, descriptions = FALSE, ...) {
   # prints statement data in transposed form
 
   if(!"statement" %in% class(x))
@@ -55,24 +56,33 @@ print.statement <- function(x, ...) {
   
   # names
   elements <- get_elements(x)
+  if(is.null(elements)) {
+    return(NextMethod(object = x, right = FALSE, ...))
+  }
   r_names <- row.names(values)
   el_pos <- which(elements$elementId %in% r_names )
   #fill_dots <- paste0(rep(". ", max(elements$level)), collapse = "")
-  fill_dots <- paste0(rep("  ", max(elements$level)), collapse = "")
+  fill_dots <- paste0(rep("  ", max(elements$level, na.rm = TRUE)), collapse = "")
   parent_pos <- match(elements$parentId, elements$elementId)
+  
+  if(descriptions) {
+    r_names <- elements[el_pos, "labelString"]
+  }
+
   r_names <- 
     paste0( 
-      substring(fill_dots,1, (elements[["level"]][el_pos]-1)*2-2),
+      substring(fill_dots, 1, (elements[el_pos,"level"]-1)*2-2),
       ifelse( 
-        is.na(elements[["balance"]][parent_pos]), 
+        is.na(elements[parent_pos, "balance"]), 
         "",
+
         ifelse(
-          elements[["balance"]][el_pos] == elements[["balance"]][parent_pos],
-          "+ ", "- "
-        )
+            elements[el_pos, "balance"] == elements[parent_pos, "balance"],
+            "+ ", "- "
+          )
       ),
       r_names,
-      ifelse(elements[["level"]][el_pos] < elements[["level"]][el_pos+1],
+      ifelse(el_pos < nrow(elements) & elements[["level"]][el_pos] < elements[["level"]][el_pos+1],
              " = ", "")
     )
 
@@ -105,6 +115,7 @@ print.elements <- function(x, descriptions = FALSE, ...) {
     cat(str_out, "\n")
   }
 }
+
 
 #' Print check object
 #' @param x check object

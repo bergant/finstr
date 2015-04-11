@@ -4,10 +4,12 @@
 \alias{check_statement}
 \title{Check statement}
 \usage{
-check_statement(statement)
+check_statement(statement, element_id = NULL)
 }
 \arguments{
 \item{statement}{statement object}
+
+\item{element_id}{element from hierarchy where to perform calculation (if specified)}
 }
 \value{
 check object with calculated and original values

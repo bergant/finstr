@@ -54,6 +54,21 @@ xbrl_create_data <-function() {
 }
 
 
+finstr_cols <- function(x = NULL, inverse = FALSE) {
+  cols <- c("contextId", "startDate", "endDate", "decimals")
+  if(!missing(x)) {
+    if(inverse){
+      cols <- names(x)[!names(x) %in% cols]
+    } else {
+      cols <- names(x)[names(x) %in% cols]
+    }
+  }
+  return(cols)
+}
+
+finstr_ncol <- function() length (finstr_cols())
+
+  
 #' Get a vector of statement IDs
 #' @param xbrl_vars XBRL data
 #' @importFrom magrittr "%>%"
@@ -75,8 +90,10 @@ xbrl_get_statement_ids <- function(xbrl_vars) {
     unname()
 }
 
+
 xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
-  # gets data in normal format (variables are columns and contexts are rows)
+  # gets data in normal format (with variables as columns and 
+  # time periods as rows)
   
   if( !("data.frame" %in% class(elements)) )
     elements <- data.frame(elementId = elements, stringsAsFactors = FALSE)
@@ -94,10 +111,10 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   df1 <- setNames( data.frame(rbind(rep(0, length(vec1)))), vec1)
   res <- cbind(res, df1)
   
-  value_cols <- which (
-    ! names(res) %in% c("contextId", "startDate", "endDate", "decimals") )
+  value_cols <- finstr_cols(res, inverse = TRUE)
   
-  res <- res[, c(names(res)[1:4], elements$elementId)]
+  #res <- res[, c(names(res)[1:4], elements$elementId)]
+  res <- res[, c(finstr_cols(res), elements$elementId)]
   
   # Handling strange NAs - if some columns are total NA:
   empty_cols <- sapply(res[elements$elementId], function(x) length(na.omit(x))==0 )
@@ -290,6 +307,9 @@ get_elements <- function(x, parent_id = NULL, all = TRUE) {
   # returns all terminating elements 
   # if parent_id provided, only descendands from this elements are returned
 
+  if( is.null(x)  ) {
+    stop("No statement")
+  }
   if( !"statement" %in% class(x)  ) {
     stop("Not a statement class")
   }
@@ -314,6 +334,53 @@ get_elements <- function(x, parent_id = NULL, all = TRUE) {
 
 }
 
+
+#' Get descendands
+#' @description Gets all descendand terminal elements from calculation tree
+#' @param x a statement object
+#' @param element_id element (or vector of elements) from statement hierarchy
+#' @export
+#' @keywords internal
+get_descendants <- function(x, element_id, all = FALSE) {
+  
+  unique(do.call(c, lapply(
+    element_id, function(e) {
+      get_elements(x, parent_id = e, all)[["elementId"]]
+    }
+  )))
+  
+}
+
+#' Get parent
+#' @description Gets a parent element id
+#' @param x a statement object
+#' @param element_id element id
+#' @export
+#' @keywords internal
+get_parent <- function(x, element_id) {
+  elements <- get_elements(x)
+  elements[elements$elementId %in% element_id,"parentId"]
+}
+
+
+#' Get ascendant
+#' @description Gets common ascendant from elements
+#' @param x a statement object
+#' @param element_id elements
+#' @export
+#' @keywords internal
+get_ascendant <- function(x, element_id) {
+  elements <- get_elements(x)
+
+  if( !all(element_id %in% elements[,"elementId"] )) 
+    return(NULL)
+  
+  sel_elements <- elements[elements$elementId %in% element_id,]
+  asc1 <- sapply(elements$id, function(x) { all(x == substring(sel_elements$id, 1, nchar(x)))})
+  return(elements[asc1,"elementId"])
+}
+
+
 as.elements <- function(x) {
   if( !all(c("elementId", "parentId") %in% names(x))) {
     stop("Can't convert to elements")
@@ -325,23 +392,27 @@ as.elements <- function(x) {
 #' Check statement
 #' @description Checks statement calculation consistency
 #' @param statement statement object
+#' @param element_id element from hierarchy where to perform calculation (if specified)
 #' @return check object with calculated and original values
 #' @export
-check_statement <- function(statement) {
+check_statement <- function(statement, element_id = NULL) {
   
-  els <- get_elements(statement)
   if(! "statement" %in% class(statement)) {
     stop("Not a statement object")
   }
+
+  els <- get_elements(statement)
   if(is.null(els)) {
     stop("No calculation hierarchy found")
   }
-  
+  if(missing(element_id)) {
+    element_id <- els$elementId
+  }
   err1 <- do.call(
     rbind,
-    lapply(els$elementId, function(x) {
+    lapply(element_id, function(x) {
       
-      xb <- els$balance[els$element == x]
+      xb <- els$balance[els$elementId == x]
       xc <- na.omit(els$elementId[els$parentId == x])
       xcb <- els$balance[els$element %in% xc]
       xcs <- ifelse( xb == xcb, 1, -1)
@@ -365,6 +436,7 @@ check_statement <- function(statement) {
   class(err1) <- c("check", "data.frame")
   return(err1)
 }
+
 
 
 #' Merge statement elements object
@@ -582,3 +654,176 @@ diff.statement <- function(x, lag = 1L, ...) {
   y[,5:ncol(y)] <- x[-(1:lag),5:ncol(x)] - y[,5:ncol(y)]
   return(y)
 }
+
+#'Without operator
+#'@param a element id from element hierarchy
+#'@param b element id from element hierarchy
+#'@description Used inside fold function to select elements in a without elements in b
+#'@return Lazy object with function to select statement elements in a witout elements in b
+#'@export
+#'@keywords internal
+`%without%` <- function (a, b) {
+  lazyeval::lazy(
+    setdiff( setdiff( get_descendants(x, a), get_descendants(x, b)), y)
+  )
+}
+
+
+#'Other elements
+#'@param ... element IDs from element hierarchy
+#'@description Used inside expose function to select all other elements
+#'@return Lazy object with function to select elements from statement x
+#'@export
+#'@keywords internal
+other <- function (...) {
+  # lazy_eval(other("Assets"), data = list(x = x, y = get_descendants(x, "AssetsCurrent")))
+  lazyeval::lazy(
+    setdiff(get_descendants(x, c(...) ), y)
+  ) 
+}
+
+
+
+#' Reshape to "long" format
+#' @description Reshapes statement object to a data frame with one value column
+#'  and dimension columns (endDate, elementId and parentId). 
+#'  @param x a statement object
+#'  @param levels if defined only elements from specified levels will be included
+#'  @export
+reshape_long <- function(x, levels = NULL) {
+  elements <- get_elements(x)
+  if(missing(levels)) levels <- unique(elements[["level"]])
+
+  x %>%
+    tidyr::gather_("elementId", "value", elements[["elementId"]], convert = FALSE) %>%
+    dplyr::mutate_("elementId" = ~as.character(elementId)) %>%
+    dplyr::inner_join(elements, by = "elementId") %>%
+    dplyr::filter_(~!is.na(parentId) & level %in% levels ) %>%
+    dplyr::select_(date = ~endDate, element = ~elementId, parent = ~parentId, ~value, 
+            label = ~labelString, ~decimals, element_id = ~id) %>%
+    dplyr::left_join(elements, by = c("parent" = "elementId")) %>%
+    dplyr::select_(~date, ~element, ~parent, ~value, ~label, 
+            parent_label = ~labelString, ~decimals, 
+            ~element_id,  parent_id = ~id)
+
+}
+
+expose_prepare <- function(x, e_list) {
+  used_elements <- c()
+  ret_list <- list()
+  
+  for(exp_name in names(e_list) ) { 
+    exp_els <- e_list[[exp_name]]
+    
+    # Elements can be defined as a function (lazy object)
+    # ... or as descendands of specified elements
+    if("lazy" %in% class(exp_els)) {
+      els <- lazyeval::lazy_eval( exp_els, 
+                                  data = list(x = x, y = used_elements))
+    } else {
+      els <- unname(get_descendants(x, exp_els))
+    }
+    if( any(els %in% used_elements) ) {
+      warning("The duplicate elements will be removed from ", 
+              exp_name, ": ",
+              els[ els %in% used_elements],
+              call. = FALSE)
+      els <- setdiff( els, used_elements)
+    }
+    # track used elements
+    used_elements <- c(used_elements, els)
+    # result
+    ret_list[[exp_name]] <- els    
+  }
+  
+  # pick all leftovers
+  elements <- get_elements(x, all = FALSE)[["elementId"]]
+  the_rest <- setdiff(elements, used_elements)
+  if(length(the_rest) > 0) {
+    the_rest <- split(the_rest, sapply(the_rest, function(s) get_ascendant(x, s)[1]))
+    for(tr in names(the_rest)) {
+      ret_list[[paste0("Other",tr,"_")]] <- the_rest[[tr]]
+    }
+  }
+  
+  return(ret_list)
+}
+
+
+#' Expose financial sheet values
+#' 
+#' Simplifies statement to 2-level hierarchy.
+#' Elements are defined by list of element vectors.
+#' 
+#' @param x a statement object
+#' @param ... expressions to expose values
+#' @param e_list expressions to expose values
+#' @examples
+#' 
+#' \dontrun{
+#' bs_simple <- expose(balance_sheet,
+#'                      
+#'   # Assets
+#'   `Current Assets` = "AssetsCurrent",
+#'   `Noncurrent Assets` = other("Assets"),
+#'   # Liabilites and equity
+#'   `Current Liabilities` = "LiabilitiesCurrent",
+#'   `Noncurrent Liabilities` = other(c("Liabilities", "CommitmentsAndContingencies")),
+#'   `Stockholders Equity` = "StockholdersEquity"
+#' )
+#' }
+#' @export
+expose <- function(x, ..., e_list = NULL) {
+  
+  # concatenate dots and list arguments
+  e_list <- c(e_list, list(...))
+  # prepare list of elements
+  if(length(e_list) > 0)
+    e_list <- expose_prepare(x, e_list)
+  
+  descriptions <- names(e_list)
+  names(e_list) <- make.names(names(e_list))
+  
+  # initial y = top level elements from x
+  x_els <- get_elements(x)
+  y_els <- x_els[ x_els$level == 1, ]
+  y_els$terminal <- TRUE
+  y <- x[, c(names(x)[1:4], y_els$elementId)]
+  attr(y, "elements") <- y_els
+
+  for(exp_name in names(e_list) ) { 
+    els <- e_list[[exp_name]]
+    description <- descriptions[which(exp_name == names(e_list))]
+    # add a row in elements object
+    parent_id <- get_ascendant(x, els)[1]
+    if(is.na(parent_id) || length(parent_id) == 0)
+      stop("A group of elements defined too broadly")
+    balance <- x_els[ x_els$elementId == parent_id, "balance" ]
+    labelString <- description
+    
+    y_els <-
+      dplyr::bind_rows(y_els, dplyr::data_frame(
+          elementId = exp_name,
+          parentId = parent_id,
+          order = 1,
+          balance = balance,
+          labelString = labelString))
+    
+    # calculate value
+    xb <- x_els$balance[x_els$elementId == parent_id]
+    xc <- na.omit(x_els[x_els$elementId %in% els, "elementId"])
+    xcb <- x_els[x_els$elementId %in% xc, "balance"]
+    xcs <- ifelse(xb == xcb, 1, -1)
+    xcv <- rowSums(crossprod(t(x[, xc]), xcs) )
+    y[[exp_name]] <- xcv
+    
+    # rearrange hierarchy
+    y_els <- get_elements_h(y_els[1:5])
+    y_els <- as.elements(y_els)
+    y <- y[,c(names(x)[1:4], y_els$elementId)]
+    attr(y, "elements") <- y_els
+  }
+  
+  return(y)
+}
+
