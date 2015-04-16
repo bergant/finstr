@@ -21,15 +21,15 @@ For now it is offering:
 
 **1. Data structure for financial statements**
 
-  - Reading from data frames parsed with XBRL package
+  - Reading from data parsed by XBRL package
   - Statements in tidy format with accounting taxonomy concepts as columns
-  - Encapsulating calculation hierarchy of variables
+  - Encapsulates calculation hierarchy of variables
   - Default printing in transposed format and with visible hierarchy
 
-**2. Validation of statement calculation**
+**2. Statement calculation validation**
 
-  - Validation of calcuation hierarchy
   - Calculation of higher order elements
+  - Check if calculated values match original values
   
 **3. Merge statements** 
 

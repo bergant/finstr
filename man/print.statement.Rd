@@ -4,12 +4,19 @@
 \alias{print.statement}
 \title{Print a statement object}
 \usage{
-\method{print}{statement}(x, descriptions = FALSE, ...)
+\method{print}{statement}(x, descriptions = FALSE, html = FALSE,
+  big.mark = "", dateFormat = NULL, ...)
 }
 \arguments{
 \item{x}{a statement object}
 
 \item{descriptions}{if TRUE labels are printed instead of element IDs}
+
+\item{html}{print in html format (requires htmlTable)}
+
+\item{big.mark}{big mark to format numbers}
+
+\item{dateFormat}{format string for format dates}
 
 \item{...}{further arguments passed to or from other methods.}
 }

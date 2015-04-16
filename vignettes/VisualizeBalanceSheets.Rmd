@@ -49,7 +49,7 @@ tail(balance_sheet,2)
 
 ## Prepare custom hierarchy
 The only way to visualize a balance sheet is by exposing a limited number of values. 
-The first step is then to aggregate a balance sheet to a small number of pieces.
+The first step is then to aggregate a balance sheet by selected concepts.
 We can use `expose` to specify these groups of elements. For example:
 
 ```{r expose_graph}
@@ -65,6 +65,13 @@ bs_simple <- expose( balance_sheet,
 )
 
 ```
+
+## Print as a table
+```{r htmlTable, warning=FALSE}
+library(htmlTable)
+print(bs_simple, html = TRUE, big.mark = ",", dateFormat = "%Y")
+```
+
 
 ## Double stacked graph
 Using ggplot2 package we can plot a simplified balance sheet:

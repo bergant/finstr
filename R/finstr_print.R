@@ -25,95 +25,54 @@ print.statements <- function(x, ...) {
 #' 
 #' @param x a statement object
 #' @param descriptions if TRUE labels are printed instead of element IDs
+#' @param html print in html format (requires htmlTable)
+#' @param big.mark big mark to format numbers
+#' @param dateFormat format string for format dates
 #' @param ... further arguments passed to or from other methods.
 #' @export
-print.statement <- function(x, descriptions = FALSE, ...) {
-  # prints statement data in transposed form
+print.statement <- function (x, descriptions = FALSE, html = FALSE, big.mark = "", dateFormat = NULL, ...) {
 
+  # prints statement data in transposed form
+  
   if(!"statement" %in% class(x))
     stop("Not a statement object")
   if( !all(c("endDate", "startDate", "contextId") %in% names(x)) )
     return(NextMethod(object = x, ...))
   if( nrow(x)<1 )
     return(NextMethod(object = x, ...))
-
   
+  if( any(names(x)[1:finstr_ncol()] !=  finstr_cols()))
+    return(NextMethod(object = x, ...))
   
-  decimals <- min(x[["decimals"]])
-  if( is.null(decimals) ) decimals <- 0
-  if( is.na(decimals) ) decimals <- 0
-
+  if(html) {
+    return(print_htmlTable(x, big.mark = big.mark, dateFormat = dateFormat, ...))
+  }
+  
   cat( "Financial statement: ")
   cat( nrow(x), "observations from", min(x$endDate),"to",max(x$endDate), "\n")
-  cat("Numbers in ", paste(rep("0", -decimals), collapse = ""), "\n")
 
-  concepts <- names(x)[5:ncol(x)]
-  values <- as.data.frame( t(x[, concepts] * 10^decimals))
-  names(values) <- x[,3]
-  if(ncol(values)>1) {
-    values <- values[,ncol(values):1]
-  }
+  xt <- reshape_table(x)
   
-  # names
-  elements <- get_elements(x)
-  if(is.null(elements)) {
-    return(NextMethod(object = x, right = FALSE, ...))
-  }
-  r_names <- row.names(values)
-  el_pos <- which(elements$elementId %in% r_names )
-  #fill_dots <- paste0(rep(". ", max(elements$level)), collapse = "")
-  fill_dots <- paste0(rep("  ", max(elements$level, na.rm = TRUE)), collapse = "")
-  parent_pos <- match(elements$parentId, elements$elementId)
-  
+  # description
   if(descriptions) {
-    r_names <- elements[el_pos, "labelString"]
+    s_names <- xt[["labelString"]]  
+  } else {
+    s_names <- xt[["elementId"]]
   }
-
-  r_names <- 
-    paste0( 
-      substring(fill_dots, 1, (elements[el_pos,"level"]-1)*2-2),
-      ifelse( 
-        is.na(elements[parent_pos, "balance"]), 
-        "",
-
-        ifelse(
-            elements[el_pos, "balance"] == elements[parent_pos, "balance"],
-            "+ ", "- "
-          )
-      ),
-      r_names,
-      ifelse(el_pos < nrow(elements) & elements[["level"]][el_pos] < elements[["level"]][el_pos+1],
-             " = ", "")
+  s_names <- ifelse(nchar(s_names) > 58, paste0(substr(s_names, 1, 40), "..."), s_names)
+  fill_blanks <- paste0(rep("  ", 20), collapse = "")
+  s_names <- paste0(
+    substring(fill_blanks, 1, xt$level*2-2), 
+    ifelse(xt$level == 1, "  ", ifelse(xt$is_negative, "- ", "+ ")), 
+    s_names,
+    ifelse(c(xt$level[-1], 0) > xt$level, " = ", "")
     )
-
-  row.names(values) <- substring(r_names, 1, 50)
-
-  x <- values
-  NextMethod(object = x, right = FALSE, ...)
-}
-
-
-
-#' Print elements object
-#' @param x elements object
-#' @param descriptions prints labels or element IDs
-#' @param ... further arguments passed to or from other methods.
-#' @keywords internal
-#' @export
-print.elements <- function(x, descriptions = FALSE, ...) {
-  if(!all(c("level", "elementId", "labelString") %in% names(x))) {
-    return(NextMethod(object = x))
-  }
-  sel_col <- ifelse(descriptions, "labelString", "elementId")
-  for(i in seq_len(nrow(x))) {
-    str_out <- x[[sel_col]][i]
-    str_out <- paste0(paste0(rep("..", x[["level"]][i]-1), collapse=""), str_out)
-    str_out <- 
-      ifelse(nchar(str_out) > 70, 
-             paste0(substring(str_out, 1, 70), "..."),
-             str_out)
-    cat(str_out, "\n")
-  }
+  s_names <- substring(s_names, 3)
+    
+  df1 <- cbind( Element = s_names, xt[,7:ncol(xt)] )
+  df1 <- df1[, c(1, ncol(df1):2)]
+  print.data.frame(df1, right = FALSE, row.names = FALSE, ...)
+  
 }
 
 
@@ -135,3 +94,34 @@ print.check <- function(x, ...) {
     })
   }
 }
+
+print_htmlTable <- function(x, big.mark = "", dateFormat = "%h %Y", ...) {
+  if( !requireNamespace("htmlTable", quietly = TRUE)) {
+    stop("htmlTable needed for this function to work. Please install it.",
+         call. = FALSE)
+  }
+  x <- reshape_table(x)
+  tab <- x[,-c(1, 2, 3, 4, 5, 6 )]
+  labelString <- x$labelString
+  labelString <- ifelse(nchar(labelString) > 58, paste0(substr(labelString, 1, 40), "..."), labelString)
+  labelString <- 
+    paste0(substring(paste0(rep("&nbsp;", 20), collapse = ""), 1, x$level*18 - 18), 
+           labelString)
+  
+  tab[,1:ncol(tab)] <- format(tab, big.mark = big.mark)
+  
+  
+  to_strong <- function(x, b = TRUE) {
+    ifelse(b, paste0("<strong>", x, "</strong>"), x )
+  }
+  
+  row.names(tab) <- to_strong(labelString, !x$terminal)
+  for(col in colnames(tab)) {
+    tab[[col]] <- to_strong(tab[[col]], !x$terminal) 
+  }
+  if(!is.null(dateFormat))
+    names(tab) <- format( as.POSIXct(names(tab)), dateFormat)
+  tab <- tab[,ncol(tab):1]
+  htmlTable::htmlTable(tab, align = paste(rep("r", ncol(tab) ), collapse = ""))
+}
+

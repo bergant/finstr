@@ -28,8 +28,8 @@ xbrl_create_data <-function() {
   file1 <- "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
   file2 <- "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml" 
 
-  system.time(xbrl_data_aapl2013 <- XBRL::xbrlDoAll(file1) )
-  system.time(xbrl_data_aapl2014 <- XBRL::xbrlDoAll(file2) )
+  xbrl_data_aapl2013 <- XBRL::xbrlDoAll(file1)
+  xbrl_data_aapl2014 <- XBRL::xbrlDoAll(file2)
   
   
   xbrl_data_aapl2013$unit <- NULL
@@ -67,6 +67,7 @@ finstr_cols <- function(x = NULL, inverse = FALSE) {
 }
 
 finstr_ncol <- function() length (finstr_cols())
+finstr_values <- function(x) (x[(finstr_ncol()+1):ncol(x)])
 
   
 #' Get a vector of statement IDs
@@ -707,6 +708,37 @@ reshape_long <- function(x, levels = NULL) {
 
 }
 
+#' Reshape statement data to table format
+#' 
+#' Transposes data to "print-out" format
+#' @param x a statement object
+#' @param decimals return values with decimals
+#' @export
+#' @keywords internal
+reshape_table <- function(x, decimals = TRUE, simple = FALSE) {
+
+  e <- get_elements(x)
+  values <- finstr_values(x) 
+
+  if(decimals) {
+    decimals_no <- min(x[["decimals"]])
+    values <- values * 10 ^ decimals_no
+  }
+  
+  parent_pos <- match(e[["parentId"]], e[["elementId"]])
+  is_negative <- e[,"balance"] != e[parent_pos, "balance"]
+  is_negative[is.na(is_negative)] <- FALSE
+  
+  ret <- cbind(e[,c("elementId", "level", "id", "terminal", "labelString")], is_negative, t(values))
+  names(ret)[7:ncol(ret)] <- x$endDate
+  row.names(ret) <- 1:nrow(ret)
+  if(simple) {
+    ret <- ret[, -c(1, 2, 3, 4, 6)]
+  }
+  return(ret)
+}
+
+
 expose_prepare <- function(x, e_list) {
   used_elements <- c()
   ret_list <- list()
@@ -760,7 +792,7 @@ expose_prepare <- function(x, e_list) {
 #' @examples
 #' 
 #' \dontrun{
-#' bs_simple <- expose(balance_sheet,
+#' expose(balance_sheet,
 #'                      
 #'   # Assets
 #'   `Current Assets` = "AssetsCurrent",

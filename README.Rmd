@@ -15,28 +15,27 @@ knitr::opts_chunk$set(
 
 # finstr
 
-
 The purpose of **finstr** package is to create an environment for 
 reproducible financial statement analysis. 
 The package will not cover specific types of 
 analysis (except in examples and package vignettes) but will provide
 a domain language to write them. 
-With other functions in basic R and existing R packages users 
-could store, share, reuse and reproduce the results of their analitic work.
+With other functions in basic R and existing R packages it anables users 
+to store, share, reuse and reproduce the results of their analitic work.
 
 For now it is offering:
 
 **1. Data structure for financial statements**
 
-  - Reading from data frames parsed with XBRL package
+  - Reading from data parsed with XBRL package
   - Statements in tidy format with accounting taxonomy concepts as columns
-  - Encapsulating calculation hierarchy of variables
+  - Encapsulates calculation hierarchy of variables
   - Default printing in transposed format and with visible hierarchy
 
-**2. Validation of statement calculation**
+**2. Statement calculation validation**
 
-  - Validation of calcuation hierarchy
   - Calculation of higher order elements
+  - Check if calculated values match original values
   
 **3. Merge statements** 
 
@@ -46,9 +45,8 @@ For now it is offering:
 **4. Calculate and reveal**
 
   - Custom financial ratio calculations definitions 
-  - Exposing data by rearranging the calculation hierarchy
+  - Exposing data by rearranging the statament hierarchy
   - Time lagged difference
-
 
 
 ## Install finstr
@@ -338,7 +336,7 @@ diff(balance_sheet)
 
 ## Prepare custom hierarchy
 The only way to visualize a balance sheet is by exposing a limited number of values. 
-The first step is then to aggregate a balance sheet to a small number of pieces.
+The first step is then to aggregate a balance sheet by selected concepts.
 We can use `expose` to specify these groups of elements. For example:
 
 ```{r expose_graph}
@@ -353,6 +351,12 @@ bs_simple <- expose( balance_sheet,
   `Stockholders Equity` = "StockholdersEquity"
 )
 
+```
+
+## Print as a table
+```{r htmlTable, warning=FALSE}
+library(htmlTable)
+print(bs_simple, html = TRUE, big.mark = ",", dateFormat = "%Y")
 ```
 
 

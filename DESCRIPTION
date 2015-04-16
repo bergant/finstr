@@ -18,5 +18,6 @@ Imports:
 Suggests: testthat,
     knitr,
     ggplot2,
-    scales
+    scales, 
+    htmlTable
 VignetteBuilder: knitr

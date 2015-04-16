@@ -19,7 +19,7 @@ Elements are defined by list of element vectors.
 }
 \examples{
 \dontrun{
-bs_simple <- expose(balance_sheet,
+expose(balance_sheet,
 
   # Assets
   `Current Assets` = "AssetsCurrent",

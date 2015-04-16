@@ -1,21 +1,21 @@
 finstr
 ======
 
-The purpose of **finstr** package is to create an environment for reproducible financial statement analysis. The package will not cover specific types of analysis (except in examples and package vignettes) but will provide a domain language to write them. With other functions in basic R and existing R packages users could store, share, reuse and reproduce the results of their analitic work.
+The purpose of **finstr** package is to create an environment for reproducible financial statement analysis. The package will not cover specific types of analysis (except in examples and package vignettes) but will provide a domain language to write them. With other functions in basic R and existing R packages it anables users to store, share, reuse and reproduce the results of their analitic work.
 
 For now it is offering:
 
 **1. Data structure for financial statements**
 
--   Reading from data frames parsed with XBRL package
+-   Reading from data parsed with XBRL package
 -   Statements in tidy format with accounting taxonomy concepts as columns
--   Encapsulating calculation hierarchy of variables
+-   Encapsulates calculation hierarchy of variables
 -   Default printing in transposed format and with visible hierarchy
 
-**2. Validation of statement calculation**
+**2. Statement calculation validation**
 
--   Validation of calcuation hierarchy
 -   Calculation of higher order elements
+-   Check if calculated values match original values
 
 **3. Merge statements**
 
@@ -25,7 +25,7 @@ For now it is offering:
 **4. Calculate and reveal**
 
 -   Custom financial ratio calculations definitions
--   Exposing data by rearranging the calculation hierarchy
+-   Exposing data by rearranging the statament hierarchy
 -   Time lagged difference
 
 Install finstr
@@ -84,52 +84,50 @@ income2013 <- st2013$StatementOfIncome
 income2014 <- st2014$StatementOfIncome
 balance_sheet2014
 #> Financial statement: 2 observations from 2013-09-28 to 2014-09-27 
-#> Numbers in  000000 
-#>                                                    2014-09-27 2013-09-28
-#> Assets =                                           231839     207000    
-#> + AssetsCurrent =                                   68531      73286    
-#>   + CashAndCashEquivalentsAtCarryingValue           13844      14259    
-#>   + AvailableForSaleSecuritiesCurrent               11233      26287    
-#>   + AccountsReceivableNetCurrent                    17460      13102    
-#>   + InventoryNet                                     2111       1764    
-#>   + DeferredTaxAssetsNetCurrent                      4318       3453    
-#>   + NontradeReceivablesCurrent                       9759       7539    
-#>   + OtherAssetsCurrent                               9806       6882    
-#> + AvailableForSaleSecuritiesNoncurrent             130162     106215    
-#> + PropertyPlantAndEquipmentNet                      20624      16597    
-#> + Goodwill                                           4616       1577    
-#> + IntangibleAssetsNetExcludingGoodwill               4142       4179    
-#> + OtherAssetsNoncurrent                              3764       5146    
-#> LiabilitiesAndStockholdersEquity =                 231839     207000    
-#> + Liabilities =                                    120292      83451    
-#>   + LiabilitiesCurrent =                            63448      43658    
-#>     + AccountsPayableCurrent                        30196      22367    
-#>     + AccruedLiabilitiesCurrent                     18453      13856    
-#>     + DeferredRevenueCurrent                         8491       7435    
-#>     + CommercialPaper                                6308          0    
-#>   + DeferredRevenueNoncurrent                        3031       2625    
-#>   + LongTermDebt                                    28987      16960    
-#>   + OtherLiabilitiesNoncurrent                      24826      20208    
-#> + CommitmentsAndContingencies                           0          0    
-#> + StockholdersEquity =                             111547     123549    
-#>   + CommonStocksIncludingAdditionalPaidInCapital    23313      19764    
-#>   + RetainedEarningsAccumulatedDeficit              87152     104256    
-#>   + AccumulatedOtherComprehensiveIncomeLossNetOfTa   1082       -471
+#>  Element                                             2014-09-27 2013-09-28
+#>  Assets =                                            231839     207000    
+#>  + AssetsCurrent =                                    68531      73286    
+#>    + CashAndCashEquivalentsAtCarryingValue            13844      14259    
+#>    + AvailableForSaleSecuritiesCurrent                11233      26287    
+#>    + AccountsReceivableNetCurrent                     17460      13102    
+#>    + InventoryNet                                      2111       1764    
+#>    + DeferredTaxAssetsNetCurrent                       4318       3453    
+#>    + NontradeReceivablesCurrent                        9759       7539    
+#>    + OtherAssetsCurrent                                9806       6882    
+#>  + AvailableForSaleSecuritiesNoncurrent              130162     106215    
+#>  + PropertyPlantAndEquipmentNet                       20624      16597    
+#>  + Goodwill                                            4616       1577    
+#>  + IntangibleAssetsNetExcludingGoodwill                4142       4179    
+#>  + OtherAssetsNoncurrent                               3764       5146    
+#>  LiabilitiesAndStockholdersEquity =                  231839     207000    
+#>  + Liabilities =                                     120292      83451    
+#>    + LiabilitiesCurrent =                             63448      43658    
+#>      + AccountsPayableCurrent                         30196      22367    
+#>      + AccruedLiabilitiesCurrent                      18453      13856    
+#>      + DeferredRevenueCurrent                          8491       7435    
+#>      + CommercialPaper                                 6308          0    
+#>    + DeferredRevenueNoncurrent                         3031       2625    
+#>    + LongTermDebt                                     28987      16960    
+#>    + OtherLiabilitiesNoncurrent                       24826      20208    
+#>  + CommitmentsAndContingencies                            0          0    
+#>  + StockholdersEquity =                              111547     123549    
+#>    + CommonStocksIncludingAdditionalPaidInCapital     23313      19764    
+#>    + RetainedEarningsAccumulatedDeficit               87152     104256    
+#>    + AccumulatedOtherComprehensiveIncomeLossNetOfTax   1082       -471
 tail(income2014, 2)
 #> Financial statement: 2 observations from 2013-09-28 to 2014-09-27 
-#> Numbers in  000000 
-#>                                                    2014-09-27 2013-09-28
-#> NetIncomeLoss =                                     39510      37037    
-#> + IncomeLossFromContinuingOperationsBeforeIncomeTa  53483      50155    
-#>   + OperatingIncomeLoss =                           52503      48999    
-#>     + GrossProfit =                                 70537      64304    
-#>       + SalesRevenueNet                            182795     170910    
-#>       - CostOfGoodsAndServicesSold                 112258     106606    
-#>     - OperatingExpenses =                           18034      15305    
-#>       + ResearchAndDevelopmentExpense                6041       4475    
-#>       + SellingGeneralAndAdministrativeExpense      11993      10830    
-#>   + NonoperatingIncomeExpense                         980       1156    
-#> - IncomeTaxExpenseBenefit                           13973      13118
+#>  Element                                          2014-09-27 2013-09-28
+#>  NetIncomeLoss =                                   39510      37037    
+#>  + IncomeLossFromContinuingOperationsBefore... =   53483      50155    
+#>    + OperatingIncomeLoss =                         52503      48999    
+#>      + GrossProfit =                               70537      64304    
+#>        + SalesRevenueNet                          182795     170910    
+#>        - CostOfGoodsAndServicesSold               112258     106606    
+#>      - OperatingExpenses =                         18034      15305    
+#>        + ResearchAndDevelopmentExpense              6041       4475    
+#>        + SellingGeneralAndAdministrativeExpense    11993      10830    
+#>    + NonoperatingIncomeExpense                       980       1156    
+#>  - IncomeTaxExpenseBenefit                         13973      13118
 ```
 
 Validate statement calculation hierarchy
@@ -335,15 +333,14 @@ expose( balance_sheet,
   `Stockholders Equity` = "StockholdersEquity"
 )
 #> Financial statement: 3 observations from 2012-09-29 to 2014-09-27 
-#> Numbers in  000000 
-#>                                     2014-09-27 2013-09-28 2012-09-29
-#> Assets =                            231839     207000     176064    
-#> + Current.Assets                     68531      73286      57653    
-#> + Noncurrent.Assets                 163308     133714     118411    
-#> LiabilitiesAndStockholdersEquity =  231839     207000     176064    
-#> + Current.Liabilities                63448      43658      38542    
-#> + Noncurrent.Liabilities             56844      39793      19312    
-#> + Stockholders.Equity               111547     123549     118210
+#>  Element                             2014-09-27 2013-09-28 2012-09-29
+#>  Assets =                            231839     207000     176064    
+#>  + Current.Assets                     68531      73286      57653    
+#>  + Noncurrent.Assets                 163308     133714     118411    
+#>  LiabilitiesAndStockholdersEquity =  231839     207000     176064    
+#>  + Current.Liabilities                63448      43658      38542    
+#>  + Noncurrent.Liabilities             56844      39793      19312    
+#>  + Stockholders.Equity               111547     123549     118210
 ```
 
 Balance sheet stays divided by *Assets* and *Liabilities and Equity*. For the second level we are exposing *current assets* from *noncurrent* and similar is done for the *liabilities*. We choose to separate *equity*.
@@ -365,14 +362,13 @@ expose( balance_sheet,
   `Stockholders Equity` = "StockholdersEquity"
 )
 #> Financial statement: 3 observations from 2012-09-29 to 2014-09-27 
-#> Numbers in  000000 
-#>                                     2014-09-27 2013-09-28 2012-09-29
-#> Assets =                            231839     207000     176064    
-#> + Tangible.Assets                   223081     201244     170705    
-#> + Intangible.Assets                   8758       5756       5359    
-#> LiabilitiesAndStockholdersEquity =  231839     207000     176064    
-#> + Liabilities                       120292      83451      57854    
-#> + Stockholders.Equity               111547     123549     118210
+#>  Element                             2014-09-27 2013-09-28 2012-09-29
+#>  Assets =                            231839     207000     176064    
+#>  + Tangible.Assets                   223081     201244     170705    
+#>  + Intangible.Assets                   8758       5756       5359    
+#>  LiabilitiesAndStockholdersEquity =  231839     207000     176064    
+#>  + Liabilities                       120292      83451      57854    
+#>  + Stockholders.Equity               111547     123549     118210
 ```
 
 Lagged difference
@@ -384,38 +380,37 @@ To calculate lagged difference for entire statement use `diff` function. The res
 
 diff(balance_sheet)
 #> Financial statement: 2 observations from 2013-09-28 to 2014-09-27 
-#> Numbers in  000000 
-#>                                                    2014-09-27 2013-09-28
-#> Assets =                                            24839      30936    
-#> + AssetsCurrent =                                   -4755      15633    
-#>   + CashAndCashEquivalentsAtCarryingValue            -415       3513    
-#>   + AvailableForSaleSecuritiesCurrent              -15054       7904    
-#>   + AccountsReceivableNetCurrent                     4358       2172    
-#>   + InventoryNet                                      347        973    
-#>   + DeferredTaxAssetsNetCurrent                       865        870    
-#>   + NontradeReceivablesCurrent                       2220       -223    
-#>   + OtherAssetsCurrent                               2924        424    
-#> + AvailableForSaleSecuritiesNoncurrent              23947      14093    
-#> + PropertyPlantAndEquipmentNet                       4027       1145    
-#> + Goodwill                                           3039        442    
-#> + IntangibleAssetsNetExcludingGoodwill                -37        -45    
-#> + OtherAssetsNoncurrent                             -1382       -332    
-#> LiabilitiesAndStockholdersEquity =                  24839      30936    
-#> + Liabilities =                                     36841      25597    
-#>   + LiabilitiesCurrent =                            19790       5116    
-#>     + AccountsPayableCurrent                         7829       1192    
-#>     + AccruedLiabilitiesCurrent                      4597       2442    
-#>     + DeferredRevenueCurrent                         1056       1482    
-#>     + CommercialPaper                                6308          0    
-#>   + DeferredRevenueNoncurrent                         406        -23    
-#>   + LongTermDebt                                    12027      16960    
-#>   + OtherLiabilitiesNoncurrent                       4618       3544    
-#> + CommitmentsAndContingencies                           0          0    
-#> + StockholdersEquity =                             -12002       5339    
-#>   + CommonStockValue                                    0     -16422    
-#>   + RetainedEarningsAccumulatedDeficit             -17104       2967    
-#>   + AccumulatedOtherComprehensiveIncomeLossNetOfTa   1553       -970    
-#>   + CommonStocksIncludingAdditionalPaidInCapital     3549      19764
+#>  Element                                             2014-09-27 2013-09-28
+#>  Assets =                                             24839      30936    
+#>  + AssetsCurrent =                                    -4755      15633    
+#>    + CashAndCashEquivalentsAtCarryingValue             -415       3513    
+#>    + AvailableForSaleSecuritiesCurrent               -15054       7904    
+#>    + AccountsReceivableNetCurrent                      4358       2172    
+#>    + InventoryNet                                       347        973    
+#>    + DeferredTaxAssetsNetCurrent                        865        870    
+#>    + NontradeReceivablesCurrent                        2220       -223    
+#>    + OtherAssetsCurrent                                2924        424    
+#>  + AvailableForSaleSecuritiesNoncurrent               23947      14093    
+#>  + PropertyPlantAndEquipmentNet                        4027       1145    
+#>  + Goodwill                                            3039        442    
+#>  + IntangibleAssetsNetExcludingGoodwill                 -37        -45    
+#>  + OtherAssetsNoncurrent                              -1382       -332    
+#>  LiabilitiesAndStockholdersEquity =                   24839      30936    
+#>  + Liabilities =                                      36841      25597    
+#>    + LiabilitiesCurrent =                             19790       5116    
+#>      + AccountsPayableCurrent                          7829       1192    
+#>      + AccruedLiabilitiesCurrent                       4597       2442    
+#>      + DeferredRevenueCurrent                          1056       1482    
+#>      + CommercialPaper                                 6308          0    
+#>    + DeferredRevenueNoncurrent                          406        -23    
+#>    + LongTermDebt                                     12027      16960    
+#>    + OtherLiabilitiesNoncurrent                        4618       3544    
+#>  + CommitmentsAndContingencies                            0          0    
+#>  + StockholdersEquity =                              -12002       5339    
+#>    + CommonStockValue                                     0     -16422    
+#>    + RetainedEarningsAccumulatedDeficit              -17104       2967    
+#>    + AccumulatedOtherComprehensiveIncomeLossNetOfTax   1553       -970    
+#>    + CommonStocksIncludingAdditionalPaidInCapital      3549      19764
 ```
 
 Balance sheet visualization
@@ -424,7 +419,7 @@ Balance sheet visualization
 Prepare custom hierarchy
 ------------------------
 
-The only way to visualize a balance sheet is by exposing a limited number of values. The first step is then to aggregate a balance sheet to a small number of pieces. We can use `expose` to specify these groups of elements. For example:
+The only way to visualize a balance sheet is by exposing a limited number of values. The first step is then to aggregate a balance sheet by selected concepts. We can use `expose` to specify these groups of elements. For example:
 
 ``` {.r}
 bs_simple <- expose( balance_sheet,
@@ -438,6 +433,132 @@ bs_simple <- expose( balance_sheet,
   `Stockholders Equity` = "StockholdersEquity"
 )
 ```
+
+Print as a table
+----------------
+
+``` {.r}
+library(htmlTable)
+print(bs_simple, html = TRUE, big.mark = ",", dateFormat = "%Y")
+```
+
+<table class='gmisc_table' style='border-collapse: collapse;' >
+<thead>
+<tr>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey;'> </th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>
+2014
+</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>
+2013
+</th>
+<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>
+2012
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style='text-align: left;'>
+<strong>Assets</strong>
+</td>
+<td style='text-align: right;'>
+<strong>231,839</strong>
+</td>
+<td style='text-align: right;'>
+<strong>207,000</strong>
+</td>
+<td style='text-align: right;'>
+<strong>176,064</strong>
+</td>
+</tr>
+<tr>
+<td style='text-align: left;'>
+   Current Assets
+</td>
+<td style='text-align: right;'> 
+68,531
+</td>
+<td style='text-align: right;'> 
+73,286
+</td>
+<td style='text-align: right;'> 
+57,653
+</td>
+</tr>
+<tr>
+<td style='text-align: left;'>
+   Noncurrent Assets
+</td>
+<td style='text-align: right;'>
+163,308
+</td>
+<td style='text-align: right;'>
+133,714
+</td>
+<td style='text-align: right;'>
+118,411
+</td>
+</tr>
+<tr>
+<td style='text-align: left;'>
+<strong>Liabilities And Stockholders Equity</strong>
+</td>
+<td style='text-align: right;'>
+<strong>231,839</strong>
+</td>
+<td style='text-align: right;'>
+<strong>207,000</strong>
+</td>
+<td style='text-align: right;'>
+<strong>176,064</strong>
+</td>
+</tr>
+<tr>
+<td style='text-align: left;'>
+   Current Liabilities
+</td>
+<td style='text-align: right;'> 
+63,448
+</td>
+<td style='text-align: right;'> 
+43,658
+</td>
+<td style='text-align: right;'> 
+38,542
+</td>
+</tr>
+<tr>
+<td style='text-align: left;'>
+   Noncurrent Liabilities
+</td>
+<td style='text-align: right;'> 
+56,844
+</td>
+<td style='text-align: right;'> 
+39,793
+</td>
+<td style='text-align: right;'> 
+19,312
+</td>
+</tr>
+<tr>
+<td style='border-bottom: 2px solid grey; text-align: left;'>
+   Stockholders Equity
+</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>
+111,547
+</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>
+123,549
+</td>
+<td style='border-bottom: 2px solid grey; text-align: right;'>
+118,210
+</td>
+</tr>
+</tbody>
+</table>
+
 
 Double stacked graph
 --------------------
