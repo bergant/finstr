@@ -103,7 +103,7 @@ print_htmlTable <- function(x, big.mark = "", dateFormat = "%h %Y", ...) {
   x <- reshape_table(x)
   tab <- x[,-c(1, 2, 3, 4, 5, 6 )]
   labelString <- x$labelString
-  labelString <- ifelse(nchar(labelString) > 58, paste0(substr(labelString, 1, 40), "..."), labelString)
+  #labelString <- ifelse(nchar(labelString) > 68, paste0(substr(labelString, 1, 65), "..."), labelString)
   labelString <- 
     paste0(substring(paste0(rep("&nbsp;", 20), collapse = ""), 1, x$level*18 - 18), 
            labelString)

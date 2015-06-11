@@ -91,7 +91,12 @@ xbrl_get_statement_ids <- function(xbrl_vars) {
     unname()
 }
 
-
+#' Get a statement from data (data for specified elements)
+#' @param elements elements object
+#' @param xbrl_vars XBRL data
+#' @param complete_only just the rows without NA
+#' @keywords internal
+#' @export
 xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   # gets data in normal format (with variables as columns and 
   # time periods as rows)
@@ -101,12 +106,18 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   
   res <-
     elements %>%
-    dplyr::inner_join(xbrl_vars$fact, by = "elementId") %>% 
-    dplyr::mutate_(fact = ~as.numeric(fact), decimals = ~as.numeric(decimals)) %>%
+    dplyr::inner_join(xbrl_vars$fact, by = "elementId")
+
+  min_dec <- min(as.numeric(res$decimals), na.rm = TRUE)
+
+  res <-
+    res %>%
+    dplyr::mutate_(fact = ~as.numeric(fact), decimals = ~min_dec )%>%
     dplyr::inner_join(xbrl_vars$context, by = "contextId") %>%
     dplyr::select_(~contextId ,  ~startDate ,  ~endDate ,  ~elementId ,  ~fact ,  ~decimals) %>%
     tidyr::spread_("elementId", "fact") %>%
     dplyr::arrange_(~endDate)
+  
   
   vec1 <- elements$elementId[! elements$elementId %in% names(res)]
   df1 <- setNames( data.frame(rbind(rep(0, length(vec1)))), vec1)
@@ -116,7 +127,7 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   
   #res <- res[, c(names(res)[1:4], elements$elementId)]
   res <- res[, c(finstr_cols(res), elements$elementId)]
-  
+
   # Handling strange NAs - if some columns are total NA:
   empty_cols <- sapply(res[elements$elementId], function(x) length(na.omit(x))==0 )
   res[, names(empty_cols)[ empty_cols]] <- 0
@@ -722,6 +733,7 @@ reshape_table <- function(x, decimals = TRUE, simple = FALSE) {
 
   if(decimals) {
     decimals_no <- min(x[["decimals"]])
+    if(is.na(decimals_no)) decimals_no <- 0
     values <- values * 10 ^ decimals_no
   }
   
