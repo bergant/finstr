@@ -33,7 +33,7 @@ Install finstr
 
 To install finstr from github use install\_github from devtools package:
 
-``` {.r}
+``` r
 library(devtools)
 install_github("bergant/finstr")
 ```
@@ -43,13 +43,14 @@ Get data
 
 Use XBRL package to parse XBRL files. For example:
 
-``` {.r}
+``` r
 library(XBRL)
 # parse XBRL (Apple 10-K report)
 xbrl_url2014 <- 
   "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml"
 xbrl_url2013 <- 
   "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
+options(stringsAsFactors = FALSE)
 xbrl_data_aapl2014 <- xbrlDoAll(xbrl_url2014)
 xbrl_data_aapl2013 <- xbrlDoAll(xbrl_url2013)
 ```
@@ -59,7 +60,7 @@ Prepare statements
 
 With `xbrl_get_statements` convert XBRL data to *statements* object.
 
-``` {.r}
+``` r
 library(finstr)
 
 st2013 <- xbrl_get_statements(xbrl_data_aapl2013)
@@ -77,7 +78,7 @@ Statements object is a list of several statement objects (ballance sheets, incom
 
 To get a single *statement* use *statements* object as a regular R list:
 
-``` {.r}
+``` r
 balance_sheet2013 <- st2013$StatementOfFinancialPositionClassified
 balance_sheet2014 <- st2014$StatementOfFinancialPositionClassified
 income2013 <- st2013$StatementOfIncome
@@ -135,7 +136,7 @@ Validate statement calculation hierarchy
 
 Recalculate higher order concepts from basic values and check for errors.
 
-``` {.r}
+``` r
 check <- check_statement(balance_sheet2014)
 check
 #> Number of errors:  0 
@@ -144,7 +145,7 @@ check
 
 In case of error the numbers with errors will be presented along with elements:
 
-``` {.r}
+``` r
 check_statement(
   within(balance_sheet2014, InventoryNet <- InventoryNet * 2)
 )
@@ -159,7 +160,7 @@ check_statement(
 
 Validation returns all calculation results in a readable data frame. Lets check only operating income from income statement:
 
-``` {.r}
+``` r
 check <- check_statement(income2014, element_id = "OperatingIncomeLoss")
 check
 #> Number of errors:  0 
@@ -175,7 +176,7 @@ Merge statements from different periods
 
 Use `merge` function to create single financial statement data from two statements.
 
-``` {.r}
+``` r
 balance_sheet <- merge( balance_sheet2013, balance_sheet2014 )
 ```
 
@@ -183,7 +184,7 @@ The structure of merged balance sheets may differ if XBRL taxonomy changes. Func
 
 To merge all statements from *statements* object use merge on statements objects:
 
-``` {.r}
+``` r
 # merge all statements
 st_all <- merge( st2013, st2014 )
 # check if balance sheets are merged:
@@ -198,7 +199,7 @@ Merge different types of statements
 If there are no matching elements between the two statements `merge` joins statements by matching their periods. For some financial ratio calculations the combined statement may be
 a better starting point.
 
-``` {.r}
+``` r
   merge.statement(
     st_all$StatementOfFinancialPositionClassified, 
     st_all$StatementOfIncome )
@@ -215,7 +216,7 @@ Lets calculate current ratio which is defined by
 
 With dplyr package we can use `mutate`, `select` or `transmute` functions:
 
-``` {.r}
+``` r
 library(dplyr)
 
 balance_sheet %>% transmute(
@@ -230,7 +231,7 @@ balance_sheet %>% transmute(
 
 By using `finstr::calculate` function we can achieve the same result but don't have to handle the date field and there is a rounding parameter. Lets calculate for example two ratios:
 
-``` {.r}
+``` r
 
 balance_sheet %>% calculate( digits = 2,
   
@@ -257,7 +258,7 @@ We will use the formula for yearly preiods:
 
 In this case we need to connect two type of statements: balance sheets and income statements. With matching reporting periods it can be accomplished with joining two data frames:
 
-``` {.r}
+``` r
 
 merge(balance_sheet, st_all$StatementOfIncome ) %>% calculate( digits = 2,
                                                                
@@ -279,7 +280,7 @@ Reusing calculations
 
 When running same calculation for different statements, define the calculation with `calculation` and call `calculate` with argument `calculations`:
 
-``` {.r}
+``` r
 # define calculation
 profit_margins <- calculation(
   
@@ -320,7 +321,7 @@ There are many additional reasons why is rearranging statements useful step befo
 
 To rearrange the statement to simple 2-level hierarchy use `expose` function.
 
-``` {.r}
+``` r
 expose( balance_sheet,
   
   # Assets
@@ -349,7 +350,7 @@ Function `expose` expects a list of vectors with element names. Function `other`
 
 Sometimes it is easier to define a complement than a list of elements. In this case we can use the `%without%` operator. Lets expose for example *tangible* and then *intangible* assets:
 
-``` {.r}
+``` r
 expose( balance_sheet,
   
   # Assets
@@ -376,7 +377,7 @@ Lagged difference
 
 To calculate lagged difference for entire statement use `diff` function. The result is statement of changes between successive years:
 
-``` {.r}
+``` r
 
 diff(balance_sheet)
 #> Financial statement: 2 observations from 2013-09-28 to 2014-09-27 
@@ -421,7 +422,7 @@ Prepare custom hierarchy
 
 The only way to visualize a balance sheet is by exposing a limited number of values. The first step is then to aggregate a balance sheet by selected concepts. We can use `expose` to specify these groups of elements. For example:
 
-``` {.r}
+``` r
 bs_simple <- expose( balance_sheet,
   
   # Assets
@@ -437,137 +438,135 @@ bs_simple <- expose( balance_sheet,
 Print as a table
 ----------------
 
-``` {.r}
+``` r
 library(htmlTable)
 print(bs_simple, html = TRUE, big.mark = ",", dateFormat = "%Y")
 ```
 
-<table class='gmisc_table' style='border-collapse: collapse;' >
+<table class="gmisc_table" style="border-collapse: collapse;">
 <thead>
 <tr>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey;'> </th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>
+<th style="border-bottom: 1px solid grey; border-top: 2px solid grey;">
+</th>
+<th style="border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;">
 2014
 </th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>
+<th style="border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;">
 2013
 </th>
-<th style='border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;'>
+<th style="border-bottom: 1px solid grey; border-top: 2px solid grey; text-align: center;">
 2012
 </th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style='text-align: left;'>
+<td style="text-align: left;">
 <strong>Assets</strong>
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 <strong>231,839</strong>
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 <strong>207,000</strong>
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 <strong>176,064</strong>
 </td>
 </tr>
 <tr>
-<td style='text-align: left;'>
+<td style="text-align: left;">
    Current Assets
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 68,531
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 73,286
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 57,653
 </td>
 </tr>
 <tr>
-<td style='text-align: left;'>
+<td style="text-align: left;">
    Noncurrent Assets
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 163,308
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 133,714
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 118,411
 </td>
 </tr>
 <tr>
-<td style='text-align: left;'>
+<td style="text-align: left;">
 <strong>Liabilities And Stockholders Equity</strong>
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 <strong>231,839</strong>
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 <strong>207,000</strong>
 </td>
-<td style='text-align: right;'>
+<td style="text-align: right;">
 <strong>176,064</strong>
 </td>
 </tr>
 <tr>
-<td style='text-align: left;'>
+<td style="text-align: left;">
    Current Liabilities
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 63,448
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 43,658
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 38,542
 </td>
 </tr>
 <tr>
-<td style='text-align: left;'>
+<td style="text-align: left;">
    Noncurrent Liabilities
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 56,844
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 39,793
 </td>
-<td style='text-align: right;'> 
+<td style="text-align: right;">
 19,312
 </td>
 </tr>
 <tr>
-<td style='border-bottom: 2px solid grey; text-align: left;'>
+<td style="border-bottom: 2px solid grey; text-align: left;">
    Stockholders Equity
 </td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>
+<td style="border-bottom: 2px solid grey; text-align: right;">
 111,547
 </td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>
+<td style="border-bottom: 2px solid grey; text-align: right;">
 123,549
 </td>
-<td style='border-bottom: 2px solid grey; text-align: right;'>
+<td style="border-bottom: 2px solid grey; text-align: right;">
 118,210
 </td>
 </tr>
 </tbody>
 </table>
-
-
 Double stacked graph
 --------------------
 
 Using ggplot2 package we can plot a simplified balance sheet:
 
-``` {.r}
+``` r
 library(ggplot2)
-#> Warning: package 'ggplot2' was built under R version 3.1.3
 
 plot_double_stacked_bar(bs_simple)
 ```
@@ -576,7 +575,7 @@ plot_double_stacked_bar(bs_simple)
 
 Another option is to group by faceting balance sheet side instead of date:
 
-``` {.r}
+``` r
 
 plot_double_stacked_bar(bs_simple, by_date = FALSE)
 ```
@@ -585,7 +584,7 @@ plot_double_stacked_bar(bs_simple, by_date = FALSE)
 
 Using **proportional** form we reveal the changes in balance sheet structure:
 
-``` {.r}
+``` r
 
 bs_simple_prop <- proportional(bs_simple)
 plot_double_stacked_bar(bs_simple_prop)
