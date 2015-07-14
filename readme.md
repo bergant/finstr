@@ -50,9 +50,10 @@ xbrl_url2014 <-
   "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml"
 xbrl_url2013 <- 
   "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
-options(stringsAsFactors = FALSE)
+old_o <- options(stringsAsFactors = FALSE)
 xbrl_data_aapl2014 <- xbrlDoAll(xbrl_url2014)
 xbrl_data_aapl2013 <- xbrlDoAll(xbrl_url2013)
+options(old_o)
 ```
 
 Prepare statements
