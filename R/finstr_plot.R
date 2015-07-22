@@ -70,7 +70,7 @@ plot_double_stacked_bar <- function(
     hcl(h = 120, c = 30, l = seq(30, 80, len = data_dims[2]))
   )
 
-  g1 <- 
+  g1 <-      
     ggplot2::ggplot(data = gg_data) +
     ggplot2::geom_bar(
       ggplot2::aes_string(

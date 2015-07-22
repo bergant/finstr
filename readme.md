@@ -1,5 +1,4 @@
-finstr
-======
+![finstr](img/logo.png)
 
 The purpose of **finstr** package is to create an environment for reproducible financial statement analysis. The package will not cover specific types of analysis (except in examples and package vignettes) but will provide a domain language to write them. With other functions in basic R and existing R packages it anables users to store, share, reuse and reproduce the results of their analitic work.
 

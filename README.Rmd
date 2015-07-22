@@ -3,6 +3,7 @@ title: "finstr - Financial Statements in R"
 output:
   md_document:
     variant: markdown_github
+
 ---
 
 ```{r, echo = FALSE}
@@ -13,7 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# finstr
+![finstr](img/logo.png)
 
 The purpose of **finstr** package is to create an environment for 
 reproducible financial statement analysis. 
