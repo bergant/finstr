@@ -1,8 +1,8 @@
 Package: finstr
 Type: Package
 Title: Financial Statements in R
-Version: 0.1
-Date: 2015-03-22
+Version: 0.1.1
+Date: 2015-12-15
 Author: Darko Bergant
 Maintainer: Darko Bergant <darko.bergant@gmail.com>
 Description: Data structures and functions for manipulating financial
