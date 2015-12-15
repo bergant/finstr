@@ -5,6 +5,7 @@ Version: 0.1.1
 Date: 2015-12-15
 Author: Darko Bergant
 Maintainer: Darko Bergant <darko.bergant@gmail.com>
+URL: https://github.com/bergant/finstr
 Description: Data structures and functions for manipulating financial
     statements. Using parsed XBRL data and validating statement consistency.
     Merging statements from different periods or different statement types.

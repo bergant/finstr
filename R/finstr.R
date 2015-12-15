@@ -714,9 +714,9 @@ other <- function (...) {
 #' Reshape to "long" format
 #' @description Reshapes statement object to a data frame with one value column
 #'  and dimension columns (endDate, elementId and parentId). 
-#'  @param x a statement object
-#'  @param levels if defined only elements from specified levels will be included
-#'  @export
+#' @param x a statement object
+#' @param levels if defined only elements from specified levels will be included
+#' @export
 reshape_long <- function(x, levels = NULL) {
   elements <- get_elements(x)
   if(missing(levels)) levels <- unique(elements[["level"]])
