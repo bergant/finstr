@@ -69,7 +69,7 @@ print.statement <- function (x, descriptions = FALSE, html = FALSE, big.mark = "
     )
   s_names <- substring(s_names, 3)
     
-  df1 <- cbind( Element = s_names, xt[,7:ncol(xt)] )
+  df1 <- cbind( Element = s_names, xt[,7:ncol(xt), drop = FALSE] )
   df1 <- df1[, c(1, ncol(df1):2)]
   print.data.frame(df1, right = FALSE, row.names = FALSE, ...)
   

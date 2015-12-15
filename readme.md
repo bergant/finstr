@@ -27,10 +27,10 @@ For now it is offering:
 -   Exposing data by rearranging the statament hierarchy
 -   Time lagged difference
 
-Install finstr
---------------
+Installation
+------------
 
-To install finstr from github use install\_github from devtools package:
+To install finstr from github use `install_github` from devtools package:
 
 ``` r
 library(devtools)

@@ -115,10 +115,11 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
     dplyr::mutate_(fact = ~as.numeric(fact), decimals = ~min_dec )%>%
     dplyr::inner_join(xbrl_vars$context, by = "contextId") %>%
     dplyr::select_(~contextId ,  ~startDate ,  ~endDate ,  ~elementId ,  ~fact ,  ~decimals) %>%
+    #dplyr::add_rownames() %>% 
     tidyr::spread_("elementId", "fact") %>%
     dplyr::arrange_(~endDate)
   
-  
+
   vec1 <- elements$elementId[! elements$elementId %in% names(res)]
   df1 <- setNames( data.frame(rbind(rep(0, length(vec1)))), vec1)
   res <- cbind(res, df1)
@@ -182,7 +183,8 @@ get_elements_h <- function(elements) {
   level <- 1
   df1 <- elements %>%
     dplyr::filter_(~is.na(parentId)) %>%
-    dplyr::mutate(id = "")
+    dplyr::mutate(id = "") %>% 
+    dplyr::arrange_(~dplyr::desc(balance))
 
   while({
     level_str <- 
@@ -229,6 +231,12 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
     dplyr::mutate(order = as.numeric(order)) %>%
     unique() 
 
+  # check the hierarchy: children should not be duplicated
+  duplicated_children <- duplicated(res$toElementId)
+  if(any(duplicated_children)) {
+    res <- res[!duplicated_children, ]
+    warning("Found and removed duplicated children in ", lbase, "/",role_id, call. = FALSE)
+  }
   class(res) <- c("xbrl_relations", "data.frame")
   return(res)
 }
@@ -329,7 +337,11 @@ get_elements <- function(x, parent_id = NULL, all = TRUE) {
   elements <- attr(x, "elements")
   
   if(!missing(parent_id)) {
-    id_parent <- elements[["id"]][elements[["elementId"]] == parent_id]
+    children <- elements[["elementId"]] == parent_id
+    if(!any(children)) {
+      stop("No children with parent ", parent_id, " found", call. = FALSE)
+    }
+    id_parent <- elements[["id"]][children]
     elements <- elements %>%
       dplyr::filter_(~substring(id, 1, nchar(id_parent)) == id_parent) %>%
       as.elements()
@@ -484,10 +496,11 @@ merge.elements <- function(x, y, ...) {
 #' 
 #' @param x statement object
 #' @param y statement object
+#' @param replace_na (boolean) replace NAs with zeros  
 #' @param ... further arguments passed to or from other methods
 #' @return statement object
 #' @export
-merge.statement <- function(x, y, ...) {
+merge.statement <- function(x, y, replace_na = TRUE, ...) {
 
   if( !"statement" %in% class(x) || !"statement" %in% class(y) ) {
     stop("Not statement objects")
@@ -510,7 +523,9 @@ merge.statement <- function(x, y, ...) {
     
     z <- merge.data.frame(x, y, all = TRUE, ...)
     # replace NAs in values by zeros
-    z[,5:ncol(z)][is.na(z[,5:ncol(z)])] <- 0
+    if(replace_na) {
+      z[,5:ncol(z)][is.na(z[,5:ncol(z)])] <- 0
+    }
     # remove duplicated rows (based on periods)
     z <- z[!duplicated(z[c("endDate")], fromLast = TRUE), ]
     # order rows by endDate
@@ -533,11 +548,12 @@ merge.statement <- function(x, y, ...) {
 #' @details Merges all statements in x with all statements in y
 #' @param x statements object
 #' @param y statements object
+#' @param replace_na (boolean) replace NAs with zeros  
 #' @param ... further arguments passed to or from other methods
 #' @return statements object
 #' @seealso \link{merge.statement} for merging two statements
 #' @export
-merge.statements <- function(x, y, ...) {
+merge.statements <- function(x, y, replace_na = TRUE, ...) {
 
   if( !"statements" %in% class(x) || !"statements" %in% class(y) ) {
     stop("Not statements objects")
@@ -545,7 +561,7 @@ merge.statements <- function(x, y, ...) {
   
   z <-
     lapply(names(x), function(statement){
-      merge(x[[statement]], y[[statement]], ...)
+      merge(x[[statement]], y[[statement]], replace_na = replace_na, ...)
     })
   names(z) <- names(y)
   class(z) <- "statements"
@@ -857,7 +873,7 @@ expose <- function(x, ..., e_list = NULL) {
     xc <- na.omit(x_els[x_els$elementId %in% els, "elementId"])
     xcb <- x_els[x_els$elementId %in% xc, "balance"]
     xcs <- ifelse(xb == xcb, 1, -1)
-    xcv <- rowSums(crossprod(t(x[, xc]), xcs) )
+    xcv <- rowSums(crossprod(t(x[, xc]), xcs), na.rm = TRUE )
     y[[exp_name]] <- xcv
     
     # rearrange hierarchy

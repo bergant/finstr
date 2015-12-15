@@ -3,3 +3,5 @@
 ^README\.Rmd$
 ^README\.html$
 ^IMG$
+^XBRLcache$
+^\.travis\.yml$

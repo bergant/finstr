@@ -118,7 +118,6 @@ plot_waterfall <- function(x, date = NULL, ...) {
     stop("Package scales needed for this function to work. Please install it.",
          call. = FALSE)
   }
-  library(ggplot2)
 
   row_num <- 1
   if(!missing(date)) {
@@ -170,18 +169,3 @@ plot_waterfall <- function(x, date = NULL, ...) {
                     panel.border = ggplot2::element_blank()
     )
 }
-
-#' autoplot statement
-#' @param x statement object
-#' @param ... other params
-#' @export
-#' @keywords internal
-autoplot.statement <- function(x, ...) {
-  if( sum(is.na(get_elements(x)[["parentId"]] )) ) {
-    plot_double_stacked_bar(x, ...)
-  } else {
-    plot_waterfall(x, ...)
-  }
-}
-
-

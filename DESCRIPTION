@@ -5,22 +5,25 @@ Version: 0.1
 Date: 2015-03-22
 Author: Darko Bergant
 Maintainer: Darko Bergant <darko.bergant@gmail.com>
-Description: Data structures and functions for manipulating financial 
-  statements. Using parsed XBRL data and validating statement consistency.
-  Merging statements from different periods or different statement types.
-  Calculating custom financial ratios and creating custom statements
-  by aggregating financial categories.
-Depends: R (>= 2.10)
+Description: Data structures and functions for manipulating financial
+    statements. Using parsed XBRL data and validating statement consistency.
+    Merging statements from different periods or different statement types.
+    Calculating custom financial ratios and creating custom statements
+    by aggregating financial categories.
+Depends:
+    R (>= 2.10)
 License: GPL-2
-Imports: 
+Imports:
     magrittr,
     dplyr,
     tidyr,
     XBRL,
     lazyeval
-Suggests: testthat,
+Suggests:
+    testthat,
     knitr,
     ggplot2,
-    scales, 
+    scales,
     htmlTable
 VignetteBuilder: knitr
+RoxygenNote: 5.0.1

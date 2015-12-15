@@ -50,8 +50,8 @@ For now it is offering:
   - Time lagged difference
 
 
-## Install finstr
-To install finstr from github use install_github from devtools package: 
+## Installation
+To install finstr from github use `install_github` from devtools package: 
 ```{r, eval=FALSE}
 library(devtools)
 install_github("bergant/finstr")
