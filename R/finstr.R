@@ -95,9 +95,10 @@ xbrl_get_statement_ids <- function(xbrl_vars) {
 #' @param elements elements object
 #' @param xbrl_vars XBRL data
 #' @param complete_only just the rows without NA
+#' @param complete_first just the rows without NA in first column
 #' @keywords internal
 #' @export
-xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
+xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_first = TRUE) {
   # gets data in normal format (with variables as columns and 
   # time periods as rows)
   
@@ -137,8 +138,11 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE) {
   if(complete_only)
     res <- res[complete.cases( res[ value_cols ] ), ]
 
+  if(complete_first)
+    res <- res[!is.na(res[, value_cols[1]]), ]
+  
   if(any(duplicated(res$endDate))) {
-    warning("Rows with duplicated endDate")
+    #warning("Rows with duplicated endDate")
     rownames(res) <- res$contextId
   } else {
     rownames(res) <- res$endDate
@@ -245,6 +249,8 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
 #' 
 #' @param xbrl_vars a XBRL parsed object
 #' @param rm_prefix a prefix to remove from element names
+#' @param complete_only Get only context with complete facts
+#' @param complete_first Get only context with non-NA first fact
 #' @return A statements object
 #' @examples
 #' \dontrun{
@@ -261,7 +267,9 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
 #' 
 #' @seealso \link{finstr}
 #' @export
-xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_") {
+xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_", 
+                                complete_only = TRUE,
+                                complete_first = TRUE) {
 
   # xbrl is parsed xbrl
   if( !all( c("role", "calculation", "fact", "context", "element") %in% names(xbrl_vars))) {
@@ -293,7 +301,7 @@ xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_") {
           links <- relations[[stat_name]]
           elements <- elements_list[[stat_name]]
           #label <- xbrl_get_labels(xbrl_vars, elements)
-          res <- xbrl_get_data(elements, xbrl_vars)
+          res <- xbrl_get_data(elements, xbrl_vars, complete_only, complete_first)
           # delete taxonomy prefix
           names(res) <- gsub(taxonomy_prefix, "", names(res))          
           links$fromElementId <- gsub(taxonomy_prefix, "", links$fromElementId)          
@@ -758,7 +766,11 @@ reshape_table <- function(x, decimals = TRUE, simple = FALSE) {
   is_negative[is.na(is_negative)] <- FALSE
   
   ret <- cbind(e[,c("elementId", "level", "id", "terminal", "labelString")], is_negative, t(values))
-  names(ret)[7:ncol(ret)] <- x$endDate
+  if(!any(duplicated(x$endDate))) {
+    names(ret)[7:ncol(ret)] <- x$endDate
+  } else {
+    names(ret)[7:ncol(ret)] <- x$contextId
+  }
   row.names(ret) <- 1:nrow(ret)
   if(simple) {
     ret <- ret[, -c(1, 2, 3, 4, 6)]

@@ -4,12 +4,17 @@
 \alias{xbrl_get_statements}
 \title{Get a financial statements object from XBRL}
 \usage{
-xbrl_get_statements(xbrl_vars, rm_prefix = "us-gaap_")
+xbrl_get_statements(xbrl_vars, rm_prefix = "us-gaap_", complete_only = TRUE,
+  complete_first = TRUE)
 }
 \arguments{
 \item{xbrl_vars}{a XBRL parsed object}
 
 \item{rm_prefix}{a prefix to remove from element names}
+
+\item{complete_only}{Get only context with complete facts}
+
+\item{complete_first}{Get only context with non-NA first fact}
 }
 \value{
 A statements object

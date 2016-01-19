@@ -4,7 +4,8 @@
 \alias{xbrl_get_data}
 \title{Get a statement from data (data for specified elements)}
 \usage{
-xbrl_get_data(elements, xbrl_vars, complete_only = TRUE)
+xbrl_get_data(elements, xbrl_vars, complete_only = TRUE,
+  complete_first = TRUE)
 }
 \arguments{
 \item{elements}{elements object}
@@ -12,6 +13,8 @@ xbrl_get_data(elements, xbrl_vars, complete_only = TRUE)
 \item{xbrl_vars}{XBRL data}
 
 \item{complete_only}{just the rows without NA}
+
+\item{complete_first}{just the rows without NA in first column}
 }
 \description{
 Get a statement from data (data for specified elements)
