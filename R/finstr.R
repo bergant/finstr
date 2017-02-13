@@ -122,7 +122,7 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_fi
   
 
   vec1 <- elements$elementId[! elements$elementId %in% names(res)]
-  df1 <- setNames( data.frame(rbind(rep(0, length(vec1)))), vec1)
+  df1 <- stats::setNames( data.frame(rbind(rep(0, length(vec1)))), vec1)
   res <- cbind(res, df1)
   
   value_cols <- finstr_cols(res, inverse = TRUE)
@@ -131,12 +131,14 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_fi
   res <- res[, c(finstr_cols(res), elements$elementId)]
 
   # Handling strange NAs - if some columns are total NA:
-  empty_cols <- sapply(res[elements$elementId], function(x) length(na.omit(x))==0 )
+  empty_cols <- sapply(
+    res[elements$elementId], function(x) length(stats::na.omit(x))==0 
+  )
   res[, names(empty_cols)[ empty_cols]] <- 0
   
   # keep only complete rows
   if(complete_only)
-    res <- res[complete.cases( res[ value_cols ] ), ]
+    res <- res[stats::complete.cases( res[ value_cols ] ), ]
 
   if(complete_first)
     res <- res[!is.na(res[, value_cols[1]]), ]
@@ -233,6 +235,7 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
     dplyr::filter_(~roleId == role_id) %>%
     dplyr::select_(~fromElementId, ~toElementId, ~order) %>% 
     dplyr::mutate(order = as.numeric(order)) %>%
+    dplyr::arrange(order) %>% 
     unique() 
 
   # check the hierarchy: children should not be duplicated
@@ -293,7 +296,7 @@ xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_",
 
   # store xbrl data in statement data structure
   statements <- 
-    setNames(
+    stats::setNames(
       lapply(
         role_ids,
         function(role_id) {
@@ -445,7 +448,7 @@ check_statement <- function(statement, element_id = NULL) {
     lapply(element_id, function(x) {
       
       xb <- els$balance[els$elementId == x]
-      xc <- na.omit(els$elementId[els$parentId == x])
+      xc <- stats::na.omit(els$elementId[els$parentId == x])
       xcb <- els$balance[els$element %in% xc]
       xcs <- ifelse( xb == xcb, 1, -1)
       xcv <- rowSums(  crossprod (t(statement[, xc]),  xcs) )
@@ -882,7 +885,7 @@ expose <- function(x, ..., e_list = NULL) {
     
     # calculate value
     xb <- x_els$balance[x_els$elementId == parent_id]
-    xc <- na.omit(x_els[x_els$elementId %in% els, "elementId"])
+    xc <- stats::na.omit(x_els[x_els$elementId %in% els, "elementId"])
     xcb <- x_els[x_els$elementId %in% xc, "balance"]
     xcs <- ifelse(xb == xcb, 1, -1)
     xcv <- rowSums(crossprod(t(x[, xc]), xcs), na.rm = TRUE )

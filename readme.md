@@ -45,10 +45,9 @@ Use XBRL package to parse XBRL files. For example:
 ``` r
 library(XBRL)
 # parse XBRL (Apple 10-K report)
-xbrl_url2014 <- 
-  "http://edgar.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml"
+xbrl_url2014 <- "https://www.sec.gov/Archives/edgar/data/320193/000119312514383437/aapl-20140927.xml"
 xbrl_url2013 <- 
-  "http://edgar.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
+  "https://www.sec.gov/Archives/edgar/data/320193/000119312513416534/aapl-20130928.xml"
 old_o <- options(stringsAsFactors = FALSE)
 xbrl_data_aapl2014 <- xbrlDoAll(xbrl_url2014)
 xbrl_data_aapl2013 <- xbrlDoAll(xbrl_url2013)
@@ -212,7 +211,7 @@ Statement object (in our case `balance_sheet`) is also a data frame object with 
 
 Lets calculate current ratio which is defined by
 
-\[ Current Ratio = \frac{Current Assets}{Current Liabilities} \]
+$$ Current Ratio = \\frac{Current Assets}{Current Liabilities} $$
 
 With dplyr package we can use `mutate`, `select` or `transmute` functions:
 
@@ -254,7 +253,7 @@ If we need a period average value we can use a `lag` function. For example, to c
 
 We will use the formula for yearly preiods:
 
-\[ DSO = \frac{Average Accounts Receivable}{Sales Revenue} \times 365 \]
+$$ DSO = \\frac{Average Accounts Receivable}{Sales Revenue} \\times 365 $$
 
 In this case we need to connect two type of statements: balance sheets and income statements. With matching reporting periods it can be accomplished with joining two data frames:
 
@@ -443,7 +442,7 @@ library(htmlTable)
 print(bs_simple, html = TRUE, big.mark = ",", dateFormat = "%Y")
 ```
 
-<table class="gmisc_table" style="border-collapse: collapse;">
+<table class="gmisc_table" style="border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;">
 <thead>
 <tr>
 <th style="border-bottom: 1px solid grey; border-top: 2px solid grey;">

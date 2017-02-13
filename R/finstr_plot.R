@@ -66,8 +66,8 @@ plot_double_stacked_bar <- function(
   data_dims <- colSums(table(unique(gg_data[,c("element", "parent")])))
   
   bs_colors <- c(
-    hcl(h = 240, c = 30, l = seq(30, 80, len = data_dims[1])),
-    hcl(h = 120, c = 30, l = seq(30, 80, len = data_dims[2]))
+    grDevices::hcl(h = 240, c = 30, l = seq(30, 80, len = data_dims[1])),
+    grDevices::hcl(h = 120, c = 30, l = seq(30, 80, len = data_dims[2]))
   )
 
   g1 <-      
