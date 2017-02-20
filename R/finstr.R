@@ -110,9 +110,17 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_fi
     dplyr::inner_join(xbrl_vars$fact, by = "elementId")
 
   min_dec <- min(as.numeric(res$decimals), na.rm = TRUE)
+  
+  context_filter <- res %>% dplyr::filter(level == 1) %>%
+    getElement("contextId") %>% unique
 
+  decimals_filter <- res %>% dplyr::filter(level == 1) %>%
+    getElement("decimals") %>%  unique
+  
   res <-
     res %>%
+    dplyr::filter_(~contextId %in% context_filter) %>% 
+    dplyr::filter_(~decimals %in% decimals_filter) %>% 
     dplyr::mutate_(fact = ~as.numeric(fact), decimals = ~min_dec )%>%
     dplyr::inner_join(xbrl_vars$context, by = "contextId") %>%
     dplyr::select_(~contextId ,  ~startDate ,  ~endDate ,  ~elementId ,  ~fact ,  ~decimals) %>%
