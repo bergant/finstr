@@ -111,10 +111,10 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_fi
 
   min_dec <- min(as.numeric(res$decimals), na.rm = TRUE)
   
-  context_filter <- res %>% dplyr::filter(level == 1) %>%
+  context_filter <- res %>% dplyr::filter_(~level == 1) %>%
     getElement("contextId") %>% unique
 
-  decimals_filter <- res %>% dplyr::filter(level == 1) %>%
+  decimals_filter <- res %>% dplyr::filter_(~level == 1) %>%
     getElement("decimals") %>%  unique
   
   res <-
