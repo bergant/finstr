@@ -96,9 +96,12 @@ xbrl_get_statement_ids <- function(xbrl_vars) {
 #' @param xbrl_vars XBRL data
 #' @param complete_only just the rows without NA
 #' @param complete_first just the rows without NA in first column
+#' @param basic_contexts in case of duplicated periods, get only basic contexts
 #' @keywords internal
 #' @export
-xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_first = TRUE) {
+xbrl_get_data <- function(elements, xbrl_vars, 
+                          complete_only = FALSE, complete_first = TRUE, 
+                          basic_contexts = TRUE) {
   # gets data in normal format (with variables as columns and 
   # time periods as rows)
   
@@ -149,7 +152,17 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_fi
   # keep only complete rows
   if(complete_only)
     res <- res[stats::complete.cases( res[ value_cols ] ), ]
-
+  # only basic_contexts
+  if(basic_contexts) {
+    context_filter2 <-
+      res %>% 
+      dplyr::group_by_(~startDate, ~endDate) %>% 
+      dplyr::summarise_(min_context = ~contextId[nchar(contextId) == min(nchar(contextId))]) %>% 
+      getElement("min_context")
+    
+    res <- res %>% dplyr::filter_(~contextId %in% context_filter2)
+  }
+  
   if(complete_first)
     res <- res[!is.na(res[, value_cols[1]]), ]
   
@@ -167,7 +180,9 @@ xbrl_get_data <- function(elements, xbrl_vars, complete_only = TRUE, complete_fi
 
 
 xbrl_get_elements <- function(xbrl_vars, relations) {
-  
+  if(nrow(relations) == 0) {
+    return(NULL)
+  }
   # get elements & parent relations & labels
   elements <-
     data.frame( 
@@ -175,6 +190,7 @@ xbrl_get_elements <- function(xbrl_vars, relations) {
       stringsAsFactors = FALSE
       )  %>%
     dplyr::left_join(xbrl_vars$element, by = c("elementId")) %>%
+    #dplyr::filter_(~type == "xbrli:monetaryItemType") %>% 
     dplyr::left_join(relations, by = c("elementId" = "toElementId")) %>%
     dplyr::left_join(xbrl_vars$label, by = c("elementId")) %>%
     dplyr::filter_(~labelRole == "http://www.xbrl.org/2003/role/label") %>% 
@@ -264,6 +280,9 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
 #' @param rm_prefix a prefix to remove from element names
 #' @param complete_only Get only context with complete facts
 #' @param complete_first Get only context with non-NA first fact
+#' @param role_ids specify statements (all statements are returned by default)
+#' @param lbase link base ("calculation" is default)
+#' @param basic_contexts when duplicated periods, only basic contexts are returned
 #' @return A statements object
 #' @examples
 #' \dontrun{
@@ -281,8 +300,11 @@ xbrl_get_relations <- function(xbrl_vars, role_id, lbase = "calculation") {
 #' @seealso \link{finstr}
 #' @export
 xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_", 
-                                complete_only = TRUE,
-                                complete_first = TRUE) {
+                                complete_only = FALSE,
+                                complete_first = TRUE, 
+                                role_ids = NULL,
+                                lbase = "calculation",
+                                basic_contexts = TRUE )  {
 
   # xbrl is parsed xbrl
   if( !all( c("role", "calculation", "fact", "context", "element") %in% names(xbrl_vars))) {
@@ -290,12 +312,21 @@ xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_",
   }
   
   # get all statement types from XBRL
-  role_ids <- xbrl_get_statement_ids(xbrl_vars)
+  if(missing(role_ids)) {
+    role_ids <- xbrl_get_statement_ids(xbrl_vars)
+  }
   
   #get calculation link base relations
   relations <- lapply(role_ids, function(role_id){
-    xbrl_get_relations(xbrl_vars, role_id)
+    xbrl_get_relations(xbrl_vars = xbrl_vars, role_id = role_id, lbase = lbase)
   })
+  with_content <- vapply(relations, function(x) nrow(x) > 0, logical(1))
+  if(!any(with_content)) {
+    return(NULL)
+  }
+  relations <- relations[with_content]
+  role_ids <- role_ids[with_content]
+    
   names(relations) <- basename(role_ids)
   elements_list <- lapply(relations, function(x){
     xbrl_get_elements(xbrl_vars, x)
@@ -314,7 +345,9 @@ xbrl_get_statements <- function(xbrl_vars, rm_prefix = "us-gaap_",
           links <- relations[[stat_name]]
           elements <- elements_list[[stat_name]]
           #label <- xbrl_get_labels(xbrl_vars, elements)
-          res <- xbrl_get_data(elements, xbrl_vars, complete_only, complete_first)
+          res <- xbrl_get_data(elements, xbrl_vars, 
+                               complete_only, complete_first,
+                               basic_contexts)
           # delete taxonomy prefix
           names(res) <- gsub(taxonomy_prefix, "", names(res))          
           links$fromElementId <- gsub(taxonomy_prefix, "", links$fromElementId)          

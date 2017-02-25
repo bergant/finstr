@@ -4,8 +4,9 @@
 \alias{xbrl_get_statements}
 \title{Get a financial statements object from XBRL}
 \usage{
-xbrl_get_statements(xbrl_vars, rm_prefix = "us-gaap_", complete_only = TRUE,
-  complete_first = TRUE)
+xbrl_get_statements(xbrl_vars, rm_prefix = "us-gaap_",
+  complete_only = FALSE, complete_first = TRUE, role_ids = NULL,
+  lbase = "calculation", basic_contexts = TRUE)
 }
 \arguments{
 \item{xbrl_vars}{a XBRL parsed object}
@@ -15,6 +16,12 @@ xbrl_get_statements(xbrl_vars, rm_prefix = "us-gaap_", complete_only = TRUE,
 \item{complete_only}{Get only context with complete facts}
 
 \item{complete_first}{Get only context with non-NA first fact}
+
+\item{role_ids}{specify statements (all statements are returned by default)}
+
+\item{lbase}{link base ("calculation" is default)}
+
+\item{basic_contexts}{when duplicated periods, only basic contexts are returned}
 }
 \value{
 A statements object

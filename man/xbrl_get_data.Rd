@@ -4,8 +4,8 @@
 \alias{xbrl_get_data}
 \title{Get a statement from data (data for specified elements)}
 \usage{
-xbrl_get_data(elements, xbrl_vars, complete_only = TRUE,
-  complete_first = TRUE)
+xbrl_get_data(elements, xbrl_vars, complete_only = FALSE,
+  complete_first = TRUE, basic_contexts = TRUE)
 }
 \arguments{
 \item{elements}{elements object}
@@ -15,6 +15,8 @@ xbrl_get_data(elements, xbrl_vars, complete_only = TRUE,
 \item{complete_only}{just the rows without NA}
 
 \item{complete_first}{just the rows without NA in first column}
+
+\item{basic_contexts}{in case of duplicated periods, get only basic contexts}
 }
 \description{
 Get a statement from data (data for specified elements)
